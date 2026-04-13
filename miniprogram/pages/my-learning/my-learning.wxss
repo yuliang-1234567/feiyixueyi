@@ -1,0 +1,94 @@
+.container {
+  min-height: 100vh;
+  background: #f5f7fb;
+  padding: 24rpx;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.title {
+  font-size: 38rpx;
+  font-weight: 700;
+  color: #222;
+}
+
+.clear-btn {
+  height: 60rpx;
+  line-height: 60rpx;
+  border-radius: 999rpx;
+  border: none;
+  padding: 0 24rpx;
+  background: #ffe8ec;
+  color: #cc3050;
+  font-size: 24rpx;
+}
+
+.record-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18rpx;
+}
+
+.record-item {
+  display: flex;
+  gap: 16rpx;
+  background: #fff;
+  border-radius: 18rpx;
+  padding: 16rpx;
+  box-shadow: 0 8rpx 20rpx rgba(0, 0, 0, 0.06);
+}
+
+.record-image {
+  width: 170rpx;
+  height: 170rpx;
+  border-radius: 14rpx;
+  background: #eef2f8;
+}
+
+.record-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10rpx;
+}
+
+.record-skill {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #202124;
+}
+
+.record-score {
+  font-size: 26rpx;
+  color: #4f68cd;
+}
+
+.record-time {
+  font-size: 22rpx;
+  color: #9197a3;
+}
+
+.empty {
+  margin-top: 180rpx;
+  text-align: center;
+}
+
+.empty-title {
+  display: block;
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #333;
+}
+
+.empty-desc {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: #9ca1ab;
+}

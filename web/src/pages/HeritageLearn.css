@@ -1,0 +1,413 @@
+/* 学习非遗页面样式 */
+.heritage-learn-page {
+  min-height: 100vh;
+  background: #fafafa;
+  font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+}
+
+/* Hero Section */
+.heritage-hero {
+  position: relative;
+  width: 100%;
+  height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.heritage-hero-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #c8102e 0%, #8b0a1a 100%);
+  opacity: 0.95;
+}
+
+.heritage-hero-bg::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(ellipse at 30% 50%, rgba(255,255,255,0.15) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.heritage-hero-content {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  color: white;
+  padding: 0 24px;
+}
+
+.heritage-hero-badge {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.25);
+  color: white;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.heritage-hero-title {
+  font-size: 42px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: white;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.heritage-hero-subtitle {
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.95);
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* Section 通用 */
+.section-block {
+  padding: 48px 0;
+}
+
+.section-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.section-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 32px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.section-icon {
+  color: #c8102e;
+  font-size: 26px;
+}
+
+/* 非遗概述 */
+.heritage-overview {
+  background: white;
+}
+
+.overview-content p {
+  font-size: 16px;
+  line-height: 1.8;
+  color: #555;
+  margin-bottom: 16px;
+}
+
+.overview-content p:last-child {
+  margin-bottom: 0;
+}
+
+/* 非遗十大分类 */
+.heritage-categories {
+  background: #f5f5f5;
+}
+
+.categories-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.category-card {
+  text-align: center;
+  border-radius: 12px;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.category-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(200, 16, 46, 0.15);
+}
+
+.category-card .ant-card-body {
+  padding: 24px 16px;
+}
+
+.category-icon {
+  font-size: 36px;
+  display: block;
+  margin-bottom: 12px;
+}
+
+.category-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.category-desc {
+  font-size: 13px;
+  color: #666;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* 精选非遗项目 */
+.heritage-featured {
+  background: white;
+}
+
+.featured-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+}
+
+.featured-card {
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.featured-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.featured-tag {
+  display: inline-block;
+  background: #c8102e;
+  color: white;
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+
+.featured-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.featured-desc {
+  font-size: 14px;
+  color: #666;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.featured-card-clickable {
+  cursor: pointer;
+}
+
+.featured-hint {
+  display: block;
+  margin-top: 12px;
+  font-size: 13px;
+  color: #c8102e;
+  font-weight: 500;
+}
+
+/* 学习路径 */
+.heritage-path {
+  background: linear-gradient(180deg, #f5f5f5 0%, #fafafa 100%);
+}
+
+.path-steps {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: stretch;
+  gap: 24px;
+}
+
+.path-step-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.path-step {
+  background: white;
+  border-radius: 16px;
+  padding: 32px 24px;
+  min-width: 260px;
+  max-width: 280px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  border: 1px solid #eee;
+  transition: all 0.3s;
+}
+
+.path-step:hover {
+  box-shadow: 0 8px 24px rgba(200, 16, 46, 0.12);
+  border-color: rgba(200, 16, 46, 0.3);
+}
+
+.path-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: #c8102e;
+  color: white;
+  border-radius: 50%;
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.path-step-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.path-step-desc {
+  font-size: 14px;
+  color: #666;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.path-step-btn {
+  background: #c8102e;
+  border: none;
+  border-radius: 8px;
+}
+
+.path-step-btn:hover {
+  background: #a00d24;
+}
+
+.path-arrow {
+  font-size: 24px;
+  color: #ccc;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .path-steps {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .path-step-wrapper {
+    flex-direction: column;
+  }
+
+  .path-arrow {
+    transform: rotate(90deg);
+  }
+}
+
+/* 教程弹窗 */
+.heritage-tutorial-modal .ant-modal-title {
+  font-size: 18px;
+}
+
+.tutorial-modal-content {
+  padding: 0 8px;
+}
+
+.tutorial-intro {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.tutorial-intro p {
+  font-size: 15px;
+  line-height: 1.7;
+  color: #555;
+  margin: 0 0 12px 0;
+}
+
+.tutorial-intro-note {
+  font-size: 13px !important;
+  color: #888 !important;
+  font-style: italic;
+}
+
+.tutorial-list {
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.tutorial-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s;
+}
+
+.tutorial-item:hover {
+  border-color: #c8102e;
+  background: rgba(200, 16, 46, 0.04);
+}
+
+.tutorial-item-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  border-radius: 10px;
+  font-size: 20px;
+  color: #c8102e;
+}
+
+.tutorial-item-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.tutorial-item-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 6px;
+}
+
+.tutorial-item-source {
+  font-size: 13px;
+  color: #c8102e;
+  margin-bottom: 4px;
+}
+
+.tutorial-item-desc {
+  font-size: 13px;
+  color: #666;
+  line-height: 1.5;
+}
+
+.tutorial-item-arrow {
+  flex-shrink: 0;
+  color: #999;
+  margin-top: 4px;
+}
+
+.tutorial-empty {
+  text-align: center;
+  color: #999;
+  padding: 40px 20px;
+}

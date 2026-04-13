@@ -1,0 +1,21 @@
+{
+  "name": "ihc-heritage-platform",
+  "version": "1.0.0",
+  "description": "AI驱动的非遗技艺沉浸式学习与文创平台",
+  "main": "index.js",
+  "scripts": {
+    "dev:backend": "cd backend && npm run dev",
+    "dev:web": "cd web && npm start",
+    "install:all": "npm install && cd backend && npm install && cd ../web && npm install",
+    "build:web": "cd web && npm run build"
+  },
+  "keywords": [
+    "非遗",
+    "AI",
+    "AR",
+    "文创"
+  ],
+  "author": "",
+  "license": "MIT"
+}
+

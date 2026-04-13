@@ -1,0 +1,680 @@
+/* ============================================
+   新首页样式 - 按照设计图实现
+   ============================================ */
+
+.new-home-page {
+  width: 100%;
+  background: transparent;
+  font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+}
+
+/* ============================================
+   Hero Section - 首屏
+   ============================================ */
+
+.hero-section-new {
+  position: relative;
+  width: 100%;
+  height: 600px;
+  min-height: 500px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 80px;
+}
+
+.hero-background-new {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+.hero-bg-image-new {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hero-overlay-new {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to left, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.3) 100%);
+}
+
+.hero-content-new {
+  position: relative;
+  z-index: 1;
+  max-width: 500px;
+  text-align: left;
+  color: white;
+}
+
+.hero-badge {
+  display: inline-block;
+  background: #c8102e;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 24px;
+}
+
+.hero-title-new {
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 20px;
+  color: white;
+}
+
+.hero-subtitle-new {
+  font-size: 16px;
+  line-height: 1.6;
+  margin-bottom: 32px;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.hero-actions-new {
+  display: flex;
+  gap: 16px;
+}
+
+.hero-btn-primary {
+  background: #c8102e;
+  border: none;
+  color: white;
+  height: 48px;
+  padding: 0 32px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hero-btn-primary:hover {
+  background: #a00e24;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(200, 16, 46, 0.4);
+}
+
+.hero-btn-secondary {
+  background: white;
+  border: 2px solid white;
+  color: #333;
+  height: 48px;
+  padding: 0 32px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hero-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.9);
+  transform: translateY(-2px);
+}
+
+/* ============================================
+   通用 Section 样式
+   ============================================ */
+
+.section-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 60px 40px;
+}
+
+.section-header-new {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.section-title-new {
+  font-size: 32px;
+  font-weight: 700;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.title-icon {
+  font-size: 28px;
+}
+
+.title-divider {
+  width: 4px;
+  height: 32px;
+  background: #c8102e;
+  display: inline-block;
+}
+
+.section-link {
+  color: #c8102e;
+  font-size: 16px;
+  font-weight: 600;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.section-link:hover {
+  color: #a00e24;
+}
+
+.section-subtitle {
+  font-size: 16px;
+  color: #666;
+  margin-bottom: 40px;
+  line-height: 1.6;
+}
+
+/* ============================================
+   探索核心模块
+   ============================================ */
+
+.explore-modules-section {
+  background: transparent;
+  padding: 10px 0;
+}
+
+.modules-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 24px;
+}
+
+.module-card {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.module-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.module-image-wrapper {
+  position: relative;
+  width: 100%;
+  padding-top: 100%;
+  overflow: hidden;
+}
+
+.module-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.module-icon {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  font-size: 32px;
+  background: rgba(200, 16, 46, 0.9);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.module-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #333;
+  margin: 20px 20px 8px;
+}
+
+.module-description {
+  font-size: 14px;
+  color: #666;
+  margin: 0 20px 20px;
+  line-height: 1.5;
+}
+
+.module-tag {
+  display: inline-block;
+  margin: 0 20px 18px;
+  padding: 6px 10px;
+  background: #fff5f5;
+  color: #c8102e;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid rgba(200, 16, 46, 0.2);
+}
+
+/* ============================================
+   大师风采 - 轮播
+   ============================================ */
+
+.masters-section {
+  background: transparent;
+  padding: 10px 0;
+}
+
+.carousel-controls {
+  display: flex;
+  gap: 12px;
+}
+
+.carousel-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #c8102e;
+  border: none;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.carousel-btn:hover {
+  background: #a00e24;
+  transform: scale(1.1);
+}
+
+.masters-carousel {
+  overflow: hidden;
+  margin-top: 40px;
+}
+
+.masters-list {
+  display: flex;
+  gap: 24px;
+  transition: transform 0.5s ease;
+}
+
+.master-card {
+  flex: 0 0 calc(25% - 18px);
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+}
+
+.master-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.master-image-wrapper {
+  position: relative;
+  width: 100%;
+  padding-top: 75%;
+  overflow: hidden;
+}
+
+.master-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.master-category-badge {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  background: #c8102e;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.master-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: #333;
+  margin: 16px 16px 8px;
+}
+
+.master-description {
+  font-size: 14px;
+  color: #666;
+  margin: 0 16px 16px;
+  line-height: 1.5;
+}
+
+/* ============================================
+   地域非遗地图
+   ============================================ */
+
+.map-section {
+  background: transparent;
+  padding: 10px 0;
+}
+
+.map-content-wrapper {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  align-items: center;
+}
+
+.map-text-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.map-description {
+  font-size: 16px;
+  color: #666;
+  line-height: 1.6;
+}
+
+.map-keywords {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.keyword-tag {
+  background: #f5f5f5;
+  color: #333;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+}
+
+.map-button {
+  background: #c8102e;
+  border: none;
+  color: white;
+  height: 48px;
+  padding: 0 32px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  width: fit-content;
+}
+
+.map-button:hover {
+  background: #a00e24;
+}
+
+.map-visual {
+  width: 100%;
+  height: 500px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  background: #fafafa;
+}
+
+.map-image {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* 省份详情Modal样式 */
+.province-modal-content {
+  padding: 20px 0;
+}
+
+.province-info {
+  margin-bottom: 20px;
+}
+
+.province-heritage-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #c8102e;
+  margin-bottom: 16px;
+}
+
+.province-description {
+  font-size: 16px;
+  color: #666;
+  line-height: 1.8;
+  text-align: justify;
+}
+
+/* ============================================
+   非遗资讯
+   ============================================ */
+
+.news-section {
+  background: transparent;
+  padding: 10px 0;
+}
+
+.news-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-top: 40px;
+}
+
+.news-card {
+  display: block;
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+}
+
+.news-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 28px rgba(200, 16, 46, 0.15);
+}
+
+.news-card-body {
+  padding: 20px;
+}
+
+.news-summary {
+  font-size: 14px;
+  color: #666;
+  line-height: 1.6;
+  margin: 8px 0 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.news-image-wrapper {
+  position: relative;
+  width: 100%;
+  padding-top: 60%;
+  overflow: hidden;
+}
+
+.news-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.news-category {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.news-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 8px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.news-date {
+  font-size: 13px;
+  color: #999;
+  margin: 0;
+}
+
+/* ============================================
+   订阅非遗周刊
+   ============================================ */
+
+.subscribe-section {
+  background: transparent;
+  padding: 10px 0;
+}
+
+.subscribe-content {
+  max-width: 600px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.subscribe-icon {
+  font-size: 64px;
+  margin-bottom: 24px;
+}
+
+.subscribe-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 12px;
+}
+
+.subscribe-subtitle {
+  font-size: 16px;
+  color: #666;
+  margin-bottom: 32px;
+}
+
+.subscribe-form {
+  display: flex;
+  gap: 12px;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.subscribe-input {
+  flex: 1;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+.subscribe-button {
+  background: #c8102e;
+  border: none;
+  color: white;
+  padding: 0 32px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.subscribe-button:hover {
+  background: #a00e24;
+}
+
+/* ============================================
+   响应式设计
+   ============================================ */
+
+@media (max-width: 1024px) {
+  .modules-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .masters-list {
+    gap: 16px;
+  }
+
+  .master-card {
+    flex: 0 0 calc(50% - 8px);
+  }
+
+  .map-content-wrapper {
+    grid-template-columns: 1fr;
+  }
+
+  .news-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .hero-section-new {
+    height: 500px;
+    padding: 0 40px;
+  }
+
+  .hero-title-new {
+    font-size: 36px;
+  }
+
+  .section-container {
+    padding: 40px 20px;
+  }
+
+  .modules-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .master-card {
+    flex: 0 0 100%;
+  }
+
+  .news-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .subscribe-form {
+    flex-direction: column;
+  }
+
+  .subscribe-button {
+    width: 100%;
+  }
+}

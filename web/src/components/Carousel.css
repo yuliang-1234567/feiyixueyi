@@ -1,0 +1,292 @@
+/* ============================================
+   Apple风格轮播图组件样式
+   融合传统元素与Apple设计
+   ============================================ */
+
+/* 华文行楷字体定义 - 字体通过 JavaScript 动态加载 */
+
+.carousel-container {
+  width: 100%;
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: var(--apple-space-3xl) var(--apple-space-lg);
+  background: transparent;
+  font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'ST Heiti', SimHei, sans-serif;
+  border-top: 1px solid rgba(139, 111, 71, 0.1);
+  border-bottom: 1px solid rgba(139, 111, 71, 0.1);
+}
+
+/* ============================================
+   顶部元数据区域
+   ============================================ */
+
+.carousel-metadata {
+  text-align: center;
+  margin-bottom: var(--apple-space-xl);
+}
+
+.carousel-main-title {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 700;
+  color: var(--apple-text-primary);
+  margin-bottom: var(--apple-space-sm);
+  letter-spacing: 0.05em;
+  line-height: 1.3;
+  font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'ST Heiti', SimHei, sans-serif;
+  position: relative;
+  padding-bottom: var(--apple-space-xs);
+}
+
+.carousel-main-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--apple-primary) 0%, var(--apple-accent) 100%);
+  border-radius: 1px;
+}
+
+.carousel-meta-info {
+  display: flex;
+  justify-content: center;
+  gap: var(--apple-space-md);
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--apple-text-secondary);
+  margin-top: var(--apple-space-sm);
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: var(--apple-space-xs);
+}
+
+.meta-label {
+  font-weight: 500;
+  color: var(--apple-text-tertiary);
+}
+
+.meta-value {
+  color: var(--apple-text-secondary);
+}
+
+/* ============================================
+   主图片展示区
+   ============================================ */
+
+
+.carousel-image-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 1230px;
+  max-height: 600px;
+  margin: 0 auto;
+  aspect-ratio: 3 / 4;
+  background-position: center center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  border-radius: var(--apple-radius-md);
+  overflow: hidden;
+  box-shadow: var(--apple-shadow-md);
+  border: 2px solid rgba(42, 75, 75, 0.4);
+}
+
+.carousel-main-image {
+  width: 260px;
+  height: 520px;
+  margin: 40px auto;
+  object-fit: contain;
+  transition: opacity var(--apple-duration-base) var(--apple-ease),
+              transform var(--apple-duration-slow) var(--apple-ease);
+  display: block;
+}
+
+.carousel-main-image.transitioning {
+  opacity: 0.5;
+  transform: scale(0.98);
+}
+
+/* 导航箭头 */
+.carousel-nav-button {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 30px;
+  border: none;
+  border-radius: var(--apple-radius-full);
+  cursor: pointer;
+  transition: all var(--apple-duration-base) var(--apple-ease);
+  z-index: 10;
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  outline: none;
+}
+
+.carousel-nav-button:hover {
+  transform: translateY(-50%) scale(1.1);
+  opacity: 0.9;
+}
+
+.carousel-nav-button:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+.carousel-nav-prev {
+  left: var(--apple-space-lg);
+}
+
+.carousel-nav-next {
+  right: var(--apple-space-lg);
+}
+
+/* 图片标题 */
+.carousel-image-title {
+  position: absolute;
+  bottom: var(--apple-space-md);
+  left: var(--apple-space-md);
+  font-size: clamp(1rem, 1.75vw, 1.5rem);
+  color: white;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  letter-spacing: 0.02em;
+  z-index: 5;
+  font-family: '华文行楷', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+}
+
+/* 页码指示 */
+.carousel-page-indicator {
+  position: absolute;
+  bottom: var(--apple-space-md);
+  right: var(--apple-space-md);
+  font-size: 15px;
+  font-weight: 500;
+  color: white;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  z-index: 5;
+  font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+}
+
+/* ============================================
+   缩略图导航区
+   ============================================ */
+
+.carousel-thumbnails {
+  width: 100%;
+  overflow: hidden;
+  padding: var(--apple-space-md) 100px;
+}
+
+.carousel-thumbnails-scroll {
+  display: flex;
+  gap: var(--apple-space-md);
+  justify-content: center;
+  align-items: center;
+  padding: var(--apple-space-sm) var(--apple-space-md);
+  width: 100%;
+}
+
+.carousel-thumbnail {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  flex-shrink: 0;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all var(--apple-duration-base) var(--apple-ease);
+  flex: 1;
+}
+
+.carousel-thumbnail-image {
+  display: block;
+  margin: 0 auto;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--apple-duration-base) var(--apple-ease);
+}
+
+
+.carousel-thumbnail-border {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-position: center center;
+  background-size: contain;
+  background-repeat: no-repeat;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ============================================
+   响应式设计
+   ============================================ */
+
+@media (max-width: 768px) {
+  .carousel-container {
+    padding: var(--apple-space-2xl) var(--apple-space-md);
+  }
+
+  .carousel-image-wrapper {
+    aspect-ratio: 2 / 3;
+  }
+
+  .carousel-nav-button {
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+  }
+
+  .carousel-nav-prev {
+    left: var(--apple-space-sm);
+  }
+
+  .carousel-nav-next {
+    right: var(--apple-space-sm);
+  }
+
+  .carousel-image-title {
+    bottom: var(--apple-space-sm);
+    left: var(--apple-space-sm);
+    font-size: 1rem;
+    font-family: '华文行楷', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    line-height: 1.5;
+  }
+
+  .carousel-page-indicator {
+    bottom: var(--apple-space-sm);
+    right: var(--apple-space-sm);
+    font-size: 13px;
+  }
+
+  .carousel-thumbnail {
+    width: 70px;
+    height: 70px;
+  }
+
+  .carousel-meta-info {
+    flex-direction: column;
+    gap: var(--apple-space-xs);
+    align-items: center;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .carousel-thumbnail {
+    width: 60px;
+    height: 60px;
+  }
+
+  .carousel-thumbnails-scroll {
+    gap: var(--apple-space-xs);
+  }
+  
+  .carousel-container {
+    padding: var(--apple-space-xl) var(--apple-space-sm);
+  }
+}

@@ -1,0 +1,48 @@
+<!--pages/gallery/gallery.wxml-->
+<view class="container">
+  <!-- 分类筛选 -->
+  <view class="category-filter">
+    <scroll-view class="filter-scroll" scroll-x="true">
+      <view class="filter-item {{category === item.id ? 'active' : ''}}"
+            wx:for="{{categories}}" wx:key="id"
+            data-category="{{item.id}}" bindtap="selectCategory">
+        {{item.name}}
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 作品列表 -->
+  <view class="artwork-grid">
+    <view class="artwork-item" wx:for="{{artworks}}" wx:key="id"
+          data-id="{{item.id}}" bindtap="navigateToDetail">
+      <image src="{{item.imageUrl}}" mode="aspectFill" class="artwork-image" lazy-load="true"></image>
+      <view class="artwork-info">
+        <text class="artwork-title">{{item.title}}</text>
+        <view class="artwork-meta">
+          <text class="artwork-category">{{item.category}}</text>
+          <view class="artwork-stats">
+            <text class="stat-item">
+              <text>👁️</text>
+              {{item.views || 0}}
+            </text>
+            <view class="favorite-btn {{item.isFavorited ? 'active' : ''}}" catchtap="toggleFavorite" data-id="{{item.id}}">
+              <text>{{item.isFavorited ? '已收藏' : '收藏'}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 加载状态 -->
+  <view class="loading" wx:if="{{loading}}">
+    <text>加载中...</text>
+  </view>
+  <view class="no-more" wx:if="{{!hasMore && artworks.length > 0}}">
+    <text>没有更多了</text>
+  </view>
+  <view class="empty" wx:if="{{!loading && artworks.length === 0}}">
+    <text>暂无作品</text>
+  </view>
+</view>
+

@@ -1,0 +1,45 @@
+<!--pages/my-artworks/my-artworks.wxml-->
+<view class="page">
+  <view class="hero-card">
+    <view class="hero-icon">🎨</view>
+    <view class="hero-info">
+      <text class="hero-title">我的作品</text>
+      <text class="hero-desc">管理与分享我的非遗作品</text>
+    </view>
+    <view class="hero-count">
+      <text class="count-number">{{artworks.length}}</text>
+      <text class="count-label">作品数量</text>
+    </view>
+  </view>
+
+  <view class="grid" wx:if="{{artworks.length > 0}}">
+    <view class="art-card" wx:for="{{artworks}}" wx:key="id"
+          data-id="{{item.id}}" bindtap="navigateToDetail">
+      <image src="{{item.imageUrl}}" mode="aspectFill" class="art-image"></image>
+      <view class="art-content">
+        <view class="art-header">
+          <text class="art-title">{{item.title}}</text>
+          <text class="art-category">{{item.category || '未分类'}}</text>
+        </view>
+        <text class="art-desc" wx:if="{{item.description}}">{{item.description}}</text>
+        <view class="art-footer">
+          <view class="art-stat">
+            <text class="stat-icon">❤️</text>
+            <text>{{item.likesCount || 0}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="loading" wx:if="{{loading}}">
+    <text>加载中...</text>
+  </view>
+
+  <view class="empty" wx:if="{{!loading && artworks.length === 0}}">
+    <text class="empty-icon">🎨</text>
+    <text class="empty-title">还没有作品</text>
+    <text class="empty-desc">快去创作并发布你的第一件非遗作品吧</text>
+  </view>
+</view>
+

@@ -1,0 +1,96 @@
+<!--pages/recognize/recognize.wxml - 图片识别页面-->
+<view class="container">
+  <view class="header">
+    <text class="header-title">图片识别</text>
+    <text class="header-desc">上传非遗图片，识别相关信息</text>
+  </view>
+
+  <!-- 上传区域 -->
+  <view class="upload-section">
+    <view class="upload-area {{selectedImage ? 'has-image' : ''}}" bindtap="chooseImage">
+      <image wx:if="{{selectedImage}}" src="{{selectedImage}}" class="preview-image" mode="aspectFit"></image>
+      <view wx:else class="upload-placeholder">
+        <text class="upload-icon">📷</text>
+        <text class="upload-text">点击选择图片</text>
+        <text class="upload-hint">支持JPG、PNG格式</text>
+      </view>
+    </view>
+    <button class="upload-btn" bindtap="chooseImage" loading="{{uploading}}">
+      {{selectedImage ? '重新选择' : '选择图片'}}
+    </button>
+  </view>
+
+  <!-- 识别按钮 -->
+  <view class="action-section" wx:if="{{selectedImage}}">
+    <button class="recognize-btn" bindtap="recognizeImage" loading="{{recognizing}}">
+      <text class="btn-icon">🔍</text>
+      <text class="btn-text">开始识别</text>
+    </button>
+  </view>
+
+  <!-- 识别结果 -->
+  <view class="result-section" wx:if="{{result}}">
+    <view class="result-card">
+      <view class="result-header">
+        <text class="result-title">识别结果</text>
+        <text class="result-category">{{result.category || '非遗作品'}}</text>
+      </view>
+      
+      <view class="result-content">
+        <!-- 作品信息 -->
+        <view class="info-item" wx:if="{{result.title}}">
+          <text class="info-label">作品名称：</text>
+          <text class="info-value">{{result.title}}</text>
+        </view>
+        
+        <view class="info-item" wx:if="{{result.description}}">
+          <text class="info-label">作品描述：</text>
+          <text class="info-value">{{result.description}}</text>
+        </view>
+        
+        <view class="info-item" wx:if="{{result.technique}}">
+          <text class="info-label">制作工艺：</text>
+          <text class="info-value">{{result.technique}}</text>
+        </view>
+        
+        <view class="info-item" wx:if="{{result.history}}">
+          <text class="info-label">历史背景：</text>
+          <text class="info-value">{{result.history}}</text>
+        </view>
+        
+      </view>
+    </view>
+  </view>
+
+  <!-- 历史记录 -->
+  <view class="history-section" wx:if="{{history.length > 0}}">
+    <view class="section-header">
+      <text class="section-title">识别历史</text>
+      <text class="clear-btn" bindtap="clearHistory">清空</text>
+    </view>
+    <view class="history-list">
+      <view 
+        class="history-item" 
+        wx:for="{{history}}" 
+        wx:key="id"
+        bindtap="viewHistory"
+        data-item="{{item}}"
+      >
+        <image src="{{item.imageUrl}}" class="history-image" mode="aspectFill"></image>
+        <view class="history-info">
+          <text class="history-title">{{item.title || '未识别'}}</text>
+          <text class="history-time">{{item.time}}</text>
+        </view>
+        <text class="history-arrow">›</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 加载提示 -->
+  <view class="loading-mask" wx:if="{{recognizing || uploading}}">
+    <view class="loading-content">
+      <text class="loading-icon">{{recognizing ? '🔍' : '📤'}}</text>
+      <text class="loading-text">{{recognizing ? '识别中...' : '上传中...'}}</text>
+    </view>
+  </view>
+</view>

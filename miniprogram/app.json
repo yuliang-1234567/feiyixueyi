@@ -1,0 +1,66 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/gallery/gallery",
+    "pages/artwork-detail/artwork-detail",
+    "pages/recognize/recognize",
+    "pages/learn/learn",
+    "pages/ai-learn/ai-learn",
+    "pages/login/login",
+    "pages/profile/profile",
+    "pages/my-learning/my-learning",
+    "pages/my-artworks/my-artworks",
+    "pages/my-likes/my-likes",
+    "pages/settings/settings",
+    "pages/about/about"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#667eea",
+    "navigationBarTitleText": "非遗技艺平台",
+    "navigationBarTextStyle": "white",
+    "enablePullDownRefresh": true
+  },
+  "tabBar": {
+    "color": "#7A7E83",
+    "selectedColor": "#667eea",
+    "borderStyle": "black",
+    "backgroundColor": "#ffffff",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "images/tabbar/home.png",
+        "selectedIconPath": "images/tabbar/home-active.png"
+      },
+      {
+        "pagePath": "pages/gallery/gallery",
+        "text": "作品",
+        "iconPath": "images/tabbar/gallery.png",
+        "selectedIconPath": "images/tabbar/gallery-active.png"
+      },
+      {
+        "pagePath": "pages/learn/learn",
+        "text": "学习",
+        "iconPath": "images/tabbar/shop.png",
+        "selectedIconPath": "images/tabbar/shop-active.png"
+      },
+      {
+        "pagePath": "pages/ai-learn/ai-learn",
+        "text": "学艺",
+        "iconPath": "images/tabbar/ar.png",
+        "selectedIconPath": "images/tabbar/ar-active.png"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的",
+        "iconPath": "images/tabbar/profile.png",
+        "selectedIconPath": "images/tabbar/profile-active.png"
+      }
+    ]
+  },
+  "requiredBackgroundModes": ["audio"],
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}
+

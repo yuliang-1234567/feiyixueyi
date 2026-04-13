@@ -1,0 +1,168 @@
+.container {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #f7f8fc 0%, #ffffff 100%);
+  padding: 28rpx;
+}
+
+.hero {
+  margin-bottom: 22rpx;
+}
+
+.hero-title {
+  display: block;
+  font-size: 46rpx;
+  font-weight: 700;
+  color: #202124;
+}
+
+.hero-desc {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  color: #6f7480;
+  line-height: 1.6;
+}
+
+.map-card {
+  background: #fff;
+  border-radius: 24rpx;
+  padding: 26rpx;
+  box-shadow: 0 12rpx 28rpx rgba(79, 104, 205, 0.12);
+}
+
+.map-head {
+  margin-bottom: 20rpx;
+}
+
+.map-title {
+  display: block;
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #23262f;
+}
+
+.map-sub {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: #7a7f8c;
+}
+
+.map-keywords {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-bottom: 18rpx;
+}
+
+.keyword {
+  font-size: 22rpx;
+  color: #3f4f8a;
+  background: #edf1ff;
+  border: 1rpx solid #d9e1ff;
+  border-radius: 999rpx;
+  padding: 8rpx 20rpx;
+}
+
+.search-box {
+  height: 74rpx;
+  border: 1rpx solid #dce3f7;
+  border-radius: 12rpx;
+  display: flex;
+  align-items: center;
+  padding: 0 20rpx;
+  margin-bottom: 18rpx;
+}
+
+.search-input {
+  flex: 1;
+  font-size: 26rpx;
+}
+
+.search-clear {
+  color: #5b6ecf;
+  font-size: 24rpx;
+}
+
+.province-scroll {
+  height: 720rpx;
+}
+
+.province-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14rpx;
+  padding-bottom: 10rpx;
+}
+
+.province-item {
+  background: #f7f9ff;
+  border: 1rpx solid #dce3f7;
+  border-radius: 14rpx;
+  padding: 16rpx;
+}
+
+.province-item:active {
+  background: #e8eeff;
+}
+
+.province-name {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #202124;
+}
+
+.province-heritage {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 23rpx;
+  color: #5f6780;
+}
+
+.panel-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: flex-end;
+  z-index: 99;
+}
+
+.panel {
+  width: 100%;
+  background: #fff;
+  border-radius: 28rpx 28rpx 0 0;
+  padding: 28rpx;
+  max-height: 70vh;
+}
+
+.panel-title {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #202124;
+  margin-bottom: 16rpx;
+}
+
+.panel-content-wrap {
+  max-height: 36vh;
+}
+
+.panel-content {
+  font-size: 27rpx;
+  color: #4f5565;
+  line-height: 1.8;
+}
+
+.panel-btn {
+  margin-top: 24rpx;
+  width: 100%;
+  height: 82rpx;
+  line-height: 82rpx;
+  border: none;
+  border-radius: 14rpx;
+  background: #cb1232;
+  color: #fff;
+  font-size: 30rpx;
+  font-weight: 600;
+}

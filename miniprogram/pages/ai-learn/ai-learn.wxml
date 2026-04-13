@@ -1,0 +1,85 @@
+<view class="container">
+  <view class="step-container" wx:if="{{currentStep === 1}}">
+    <view class="step-header">
+      <text class="step-title">选择非遗技艺</text>
+      <text class="step-desc">选择您想要学习的传统技艺</text>
+    </view>
+
+    <view class="skills-grid">
+      <view class="skill-card" wx:for="{{skills}}" wx:key="id" data-skill="{{item}}" bindtap="selectSkill">
+        <text class="skill-icon">{{item.icon}}</text>
+        <text class="skill-name">{{item.name}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="step-container" wx:if="{{currentStep === 2}}">
+    <view class="step-header">
+      <text class="step-title">上传您的作品</text>
+      <text class="step-desc">拍摄或选择您创作的作品图片</text>
+    </view>
+
+    <view class="selected-skill">
+      <text class="skill-icon-large">{{selectedSkill.icon}}</text>
+      <text class="skill-name-large">{{selectedSkill.name}}</text>
+    </view>
+
+    <view class="upload-area">
+      <image wx:if="{{userWork}}" src="{{userWork}}" class="preview-image" mode="aspectFit" />
+      <view wx:else class="upload-placeholder" bindtap="chooseImage">
+        <text class="upload-icon">📷</text>
+        <text class="upload-text">点击上传作品</text>
+      </view>
+    </view>
+
+    <view class="action-buttons">
+      <button class="btn-primary" bindtap="chooseImage">{{userWork ? '重新选择' : '选择图片'}}</button>
+      <button class="btn-secondary" bindtap="goBack">返回</button>
+    </view>
+  </view>
+
+  <view class="step-container" wx:if="{{currentStep === 3}}">
+    <view class="analyzing-container">
+      <view class="loading-animation"><text class="spinner">⏳</text></view>
+      <text class="analyzing-text">正在分析您的作品...</text>
+      <text class="analyzing-desc">请稍候，这可能需要一些时间</text>
+    </view>
+  </view>
+
+  <view class="step-container" wx:if="{{currentStep === 4 && analysisResult}}">
+    <view class="step-header"><text class="step-title">分析结果</text></view>
+
+    <view class="result-card">
+      <view class="user-work-section" wx:if="{{userWork}}">
+        <text class="detail-title">您的作品：</text>
+        <image src="{{userWork}}" class="user-work-image" mode="aspectFit" />
+      </view>
+
+      <view class="result-header">
+        <text class="result-label">相似度评分</text>
+        <text class="result-score">{{analysisResult.similarity || 0}}%</text>
+      </view>
+
+      <view class="result-details" wx:if="{{aiAdvice}}">
+        <text class="detail-title">作品优势：</text>
+        <view class="suggestion-item" wx:for="{{aiAdvice.strengths}}" wx:key="index"><text class="suggestion-text">✅ {{item}}</text></view>
+
+        <text class="detail-title">改进建议：</text>
+        <view class="suggestion-item" wx:for="{{aiAdvice.improvements}}" wx:key="index"><text class="suggestion-text">💡 {{item}}</text></view>
+
+        <text class="detail-title">学习计划：</text>
+        <view class="learning-plan">
+          <text class="plan-item">📚 {{aiAdvice.learningPlan.direction}}</text>
+          <text class="plan-item">🎯 {{aiAdvice.learningPlan.professional}}</text>
+          <text class="plan-item">✍️ {{aiAdvice.learningPlan.skills}}</text>
+          <text class="plan-item">👨‍🏫 {{aiAdvice.learningPlan.mentor}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="action-buttons">
+      <button class="btn-primary" bindtap="restart">重新开始</button>
+      <button class="btn-secondary" bindtap="goBack">返回</button>
+    </view>
+  </view>
+</view>

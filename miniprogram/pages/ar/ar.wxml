@@ -1,0 +1,157 @@
+<!--pages/ar/ar.wxml - 山水水墨风格-->
+<view class="container">
+  <camera 
+    device-position="{{devicePosition}}" 
+    flash="{{flashMode}}" 
+    class="camera"
+    bindscancode="scanMarker"
+    bindinitdone="onCameraInit"
+    binderror="onCameraError">
+    <cover-view class="scan-overlay">
+      <cover-view class="scan-area">
+        <cover-view class="scan-corner scan-corner-tl"></cover-view>
+        <cover-view class="scan-corner scan-corner-tr"></cover-view>
+        <cover-view class="scan-corner scan-corner-bl"></cover-view>
+        <cover-view class="scan-corner scan-corner-br"></cover-view>
+        <cover-view class="scan-line"></cover-view>
+      </cover-view>
+      <cover-view class="scan-tip">将标识物对准扫描框</cover-view>
+    </cover-view>
+  </camera>
+
+  <!-- 顶部工具栏 -->
+  <view class="top-bar">
+    <view class="tool-btn" bindtap="toggleContentList">
+      <text class="tool-icon">📚</text>
+      <text class="tool-text">内容</text>
+    </view>
+    <view class="tool-btn" bindtap="toggleHistory">
+      <text class="tool-icon">🕐</text>
+      <text class="tool-text">历史</text>
+    </view>
+    <view class="tool-btn" bindtap="switchCamera">
+      <text class="tool-icon">🔄</text>
+      <text class="tool-text">切换</text>
+    </view>
+    <view class="tool-btn" bindtap="toggleFlash">
+      <text class="tool-icon">{{flashMode === 'on' ? '💡' : '🔦'}}</text>
+      <text class="tool-text">闪光</text>
+    </view>
+  </view>
+
+  <!-- 底部控制栏 -->
+  <view class="control-bar">
+    <button class="control-btn scan-btn" bindtap="scanMarker" loading="{{loading}}">
+      <text class="btn-icon">📷</text>
+      <text class="btn-text">扫描二维码</text>
+    </button>
+    <button class="control-btn image-btn" bindtap="chooseImage">
+      <text class="btn-icon">🖼️</text>
+      <text class="btn-text">图片识别</text>
+    </button>
+  </view>
+
+  <!-- AR内容信息面板 -->
+  <view class="ar-info {{showInfo ? 'show' : ''}}" wx:if="{{currentContent}}">
+    <view class="info-header">
+      <view class="info-title-wrapper">
+        <text class="info-title">{{currentContent.title}}</text>
+        <text class="info-category">{{currentContent.category || '非遗'}}</text>
+      </view>
+      <text class="close-btn" bindtap="closeInfo">×</text>
+    </view>
+    
+    <view class="info-content">
+      <!-- 标识图 -->
+      <view class="info-image-wrapper" wx:if="{{currentContent.markerImageUrl}}" bindtap="previewImage" data-url="{{currentContent.markerImageUrl}}">
+        <image src="{{currentContent.markerImageUrl}}" class="info-image" mode="aspectFit" lazy-load></image>
+      </view>
+
+      <!-- 描述 -->
+      <view class="info-section" wx:if="{{currentContent.description}}">
+        <text class="section-title">📖 简介</text>
+        <text class="section-text">{{currentContent.description}}</text>
+      </view>
+
+      <!-- 历史背景 -->
+      <view class="info-section" wx:if="{{currentContent.history}}">
+        <text class="section-title">🏛️ 历史背景</text>
+        <text class="section-text">{{currentContent.history}}</text>
+      </view>
+
+      <!-- 制作工艺 -->
+      <view class="info-section" wx:if="{{currentContent.technique}}">
+        <text class="section-title">🎨 制作工艺</text>
+        <text class="section-text">{{currentContent.technique}}</text>
+      </view>
+
+      <!-- 文化意义 -->
+      <view class="info-section" wx:if="{{currentContent.culturalSignificance}}">
+        <text class="section-title">✨ 文化意义</text>
+        <text class="section-text">{{currentContent.culturalSignificance}}</text>
+      </view>
+
+      <!-- 操作按钮 -->
+      <view class="info-actions">
+        <button class="action-btn audio-btn {{isPlaying ? 'playing' : ''}}" bindtap="playAudio" wx:if="{{currentContent.audioUrl}}">
+          <text class="action-icon">{{isPlaying ? '⏸️' : '🔊'}}</text>
+          <text class="action-text">{{isPlaying ? '暂停' : '播放'}}</text>
+        </button>
+        <button class="action-btn share-btn" open-type="share">
+          <text class="action-icon">📤</text>
+          <text class="action-text">分享</text>
+        </button>
+      </view>
+    </view>
+  </view>
+
+  <!-- AR内容列表 -->
+  <view class="content-list {{showContentList ? 'show' : ''}}">
+    <view class="list-header">
+      <text class="list-title">AR内容库</text>
+      <text class="close-btn" bindtap="toggleContentList">×</text>
+    </view>
+    <scroll-view class="list-scroll" scroll-y>
+      <view class="content-item" wx:for="{{arContents}}" wx:key="id" bindtap="selectContent" data-content="{{item}}">
+        <image src="{{item.markerImageUrl || 'https://feiyixueyi.cn/uploads/images/categories/background.jpg'}}" class="item-image" mode="aspectFill" lazy-load></image>
+        <view class="item-info">
+          <text class="item-title">{{item.title}}</text>
+          <text class="item-category">{{item.category || '非遗'}}</text>
+        </view>
+      </view>
+      <view class="empty-tip" wx:if="{{arContents.length === 0}}">
+        <text>暂无AR内容</text>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 扫描历史 -->
+  <view class="history-list {{showHistory ? 'show' : ''}}">
+    <view class="list-header">
+      <text class="list-title">扫描历史</text>
+      <text class="close-btn" bindtap="toggleHistory">×</text>
+    </view>
+    <scroll-view class="list-scroll" scroll-y>
+      <view class="history-item" wx:for="{{scanHistory}}" wx:key="id" bindtap="selectHistory" data-item="{{item}}">
+        <view class="history-icon">🕐</view>
+        <view class="history-info">
+          <text class="history-title">{{item.title}}</text>
+          <text class="history-time">{{item.scannedAt}}</text>
+        </view>
+        <text class="history-arrow">›</text>
+      </view>
+      <view class="empty-tip" wx:if="{{scanHistory.length === 0}}">
+        <text>暂无扫描记录</text>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 加载提示 -->
+  <view class="loading-mask" wx:if="{{loading}}">
+    <view class="loading-content">
+      <text class="loading-icon">⏳</text>
+      <text class="loading-text">识别中...</text>
+    </view>
+  </view>
+</view>
+

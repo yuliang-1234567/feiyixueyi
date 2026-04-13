@@ -1,0 +1,47 @@
+<view class="container">
+  <view class="hero">
+    <text class="hero-title">地域非遗地图</text>
+    <text class="hero-desc">点击省份查看代表性非遗项目与简介，体验类似 Web 端的互动探索。</text>
+  </view>
+
+  <view class="map-card">
+    <view class="map-head">
+      <text class="map-title">中国省份互动地图</text>
+      <text class="map-sub">选择省份查看非遗详情</text>
+    </view>
+
+    <view class="map-keywords">
+      <text class="keyword" wx:for="{{hotKeywords}}" wx:key="index">{{item}}</text>
+    </view>
+
+    <view class="search-box">
+      <input class="search-input" placeholder="搜索省份/非遗项目，如：江苏、苏绣" value="{{keyword}}" bindinput="onKeywordInput" />
+      <text class="search-clear" wx:if="{{keyword}}" bindtap="clearKeyword">清空</text>
+    </view>
+
+    <scroll-view class="province-scroll" scroll-y="true">
+      <view class="province-grid">
+        <view
+          class="province-item"
+          wx:for="{{filteredProvinces}}"
+          wx:key="name"
+          data-name="{{item.name}}"
+          bindtap="selectProvince"
+        >
+          <text class="province-name">{{item.name}}</text>
+          <text class="province-heritage">{{item.heritage}}</text>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <view class="panel-mask" wx:if="{{showProvincePanel}}" bindtap="closeProvincePanel">
+    <view class="panel" catchtap="true">
+      <view class="panel-title">{{selectedProvince.name}} · {{selectedProvince.heritage}}</view>
+      <scroll-view class="panel-content-wrap" scroll-y="true">
+        <text class="panel-content">{{selectedProvince.description}}</text>
+      </scroll-view>
+      <button class="panel-btn" bindtap="closeProvincePanel">我知道了</button>
+    </view>
+  </view>
+</view>

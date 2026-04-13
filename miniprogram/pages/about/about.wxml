@@ -1,0 +1,36 @@
+<!--pages/about/about.wxml-->
+<view class="container">
+  <view class="header">
+    <text class="title">关于我们</text>
+  </view>
+
+  <view class="content">
+    <view class="logo-section">
+      <text class="logo">🎨</text>
+      <text class="app-name">{{appName}}</text>
+      <text class="version">版本 {{version}}</text>
+    </view>
+
+    <view class="info-section">
+      <view class="info-item">
+        <text class="info-label">平台简介</text>
+        <text class="info-text">非遗技艺沉浸式学习与文创平台，致力于传承和推广传统非遗文化，通过智能技术和数字化手段，让传统技艺在新时代焕发新活力。</text>
+      </view>
+
+      <view class="info-item">
+        <text class="info-label">核心功能</text>
+        <text class="info-text">• 学艺：通过智能技术进行轮廓比对和相似度评分\n• 数字焕新：将传统非遗纹样应用到现代物品\n• 作品展示：浏览和学习其他用户创作的作品\n• 文创商城：购买独特的非遗文创产品</text>
+      </view>
+
+      <view class="info-item">
+        <text class="info-label">联系我们</text>
+        <text class="info-text">邮箱：contact@ihc-platform.com\n电话：400-000-0000</text>
+      </view>
+    </view>
+
+    <view class="footer">
+      <text class="copyright">© 2024 非遗技艺平台 版权所有</text>
+    </view>
+  </view>
+</view>
+

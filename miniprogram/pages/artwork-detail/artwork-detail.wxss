@@ -1,0 +1,143 @@
+/* pages/artwork-detail/artwork-detail.wxss */
+.container {
+  background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%);
+  min-height: 100vh;
+  padding-bottom: 140rpx;
+}
+
+.image-section {
+  background: #fff;
+  padding: 30rpx;
+  margin-bottom: 30rpx;
+  border-radius: 0 0 30rpx 30rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.06);
+}
+
+.artwork-image {
+  width: 100%;
+  min-height: 600rpx;
+  border-radius: 20rpx;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.1);
+}
+
+.info-section {
+  background: #fff;
+  padding: 40rpx 30rpx;
+  margin: 0 20rpx 30rpx;
+  border-radius: 24rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.06);
+}
+
+.title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.artwork-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #333;
+  flex: 1;
+}
+
+.category-tag {
+  font-size: 24rpx;
+  color: #667eea;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  padding: 8rpx 18rpx;
+  border-radius: 12rpx;
+  margin-left: 20rpx;
+  font-weight: 600;
+  border: 1rpx solid rgba(102, 126, 234, 0.2);
+  box-shadow: 0 2rpx 8rpx rgba(102, 126, 234, 0.15);
+}
+
+.artwork-description {
+  display: block;
+  font-size: 28rpx;
+  color: #666;
+  line-height: 1.8;
+  margin-bottom: 30rpx;
+}
+
+.meta-row {
+  display: flex;
+  gap: 40rpx;
+  padding-top: 20rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  font-size: 26rpx;
+  color: #999;
+}
+
+.meta-item > text:first-child {
+  font-size: 28rpx;
+  margin-right: 8rpx;
+}
+
+.meta-text {
+  font-size: 26rpx;
+}
+
+.action-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20rpx);
+  padding: 24rpx 30rpx;
+  display: flex;
+  gap: 20rpx;
+  box-shadow: 0 -4rpx 20rpx rgba(0, 0, 0, 0.08);
+  z-index: 100;
+  border-top: 1rpx solid rgba(0, 0, 0, 0.05);
+}
+
+.action-btn {
+  flex: 1;
+  height: 80rpx;
+  line-height: 80rpx;
+  text-align: center;
+  border-radius: 40rpx;
+  font-size: 28rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  border: none;
+}
+
+.like-btn {
+  background: #f5f5f5;
+  color: #666;
+  border-radius: 40rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+}
+
+.like-btn.liked {
+  background: linear-gradient(135deg, #ffeef0 0%, #ffd6e0 100%);
+  color: #ff4444;
+  box-shadow: 0 4rpx 12rpx rgba(255, 77, 79, 0.3);
+}
+
+.action-btn > text:first-child {
+  font-size: 32rpx;
+  margin-right: 8rpx;
+}
+
+.loading {
+  text-align: center;
+  padding: 200rpx 20rpx;
+  color: #999;
+  font-size: 28rpx;
+}
+

@@ -1,0 +1,49 @@
+<!--pages/my-likes/my-likes.wxml-->
+<view class="page">
+  <view class="hero-card">
+    <view class="hero-icon">❤️</view>
+    <view class="hero-info">
+      <text class="hero-title">我的收藏</text>
+      <text class="hero-desc">收藏的作品与文创商品</text>
+    </view>
+    <view class="hero-count">
+      <text class="count-number">{{likes.length}}</text>
+      <text class="count-label">收藏数量</text>
+    </view>
+  </view>
+
+  <view class="grid" wx:if="{{likes.length > 0}}">
+    <view class="like-card" wx:for="{{likes}}" wx:key="id"
+          data-id="{{item.id}}" bindtap="navigateToDetail">
+      <image src="{{item.imageUrl}}" mode="aspectFill" class="like-image"></image>
+      <view class="like-content">
+        <view class="like-header">
+          <text class="like-title">{{item.title}}</text>
+          <text class="like-category">{{item.category || '未分类'}}</text>
+        </view>
+        <text class="like-desc" wx:if="{{item.description}}">{{item.description}}</text>
+        <view class="like-footer">
+          <view class="like-stat">
+            <text class="stat-icon">❤️</text>
+            <text>{{item.likesCount || 0}}</text>
+          </view>
+          <view class="like-stat">
+            <text class="stat-icon">👁️</text>
+            <text>{{item.views || 0}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="loading" wx:if="{{loading}}">
+    <text>加载中...</text>
+  </view>
+
+  <view class="empty" wx:if="{{!loading && likes.length === 0}}">
+    <text class="empty-icon">💕</text>
+    <text class="empty-title">暂时还没有收藏</text>
+    <text class="empty-desc">在作品页点击“收藏”后会出现在这里</text>
+  </view>
+</view>
+

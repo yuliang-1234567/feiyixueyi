@@ -1,0 +1,767 @@
+/* AI学艺页面样式 */
+.ai-learn-page {
+  min-height: 100vh;
+  height: 100vh;
+  margin-top: 40px;
+  padding: 40px 20px 0;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  font-family: "KaiTi", "STKaiti", "SimKai", serif;
+}
+
+/* 页面背景装饰 */
+.ai-learn-page::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.1);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 页面标题 */
+.page-header {
+  text-align: center;
+  margin-top: 20px;
+  margin-bottom: 60px;
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+}
+
+.header-frame {
+  display: inline-block;
+  padding: 20px 50px;
+  border-radius: 0;
+  position: relative;
+}
+
+.page-title {
+  font-size: 50px;
+  font-weight: 700;
+  color: #000;
+  margin-bottom: 10px;
+  font-family: "KaiTi", "STKaiti", "SimKai", serif;
+  letter-spacing: 2px;
+}
+
+.page-subtitle {
+  font-size: 16px;
+  color: #333;
+  font-family: "KaiTi", "STKaiti", "SimKai", serif;
+}
+
+/* 确保所有文字使用楷体 */
+.ai-learn-page,
+.ai-learn-page * {
+  font-family: "KaiTi", "STKaiti", "SimKai", serif;
+}
+
+/* Ant Design 组件字体覆盖 */
+.ai-learn-page .ant-btn,
+.ai-learn-page .ant-upload,
+.ai-learn-page .ant-input,
+.ai-learn-page .ant-select {
+  font-family: "KaiTi", "STKaiti", "SimKai", serif;
+}
+
+/* 步骤容器 */
+.steps-container {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0 20px;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* 步骤卡片 */
+.step-card {
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  position: relative;
+  transition: all 0.3s ease;
+  box-shadow: none;
+  flex: 1;
+  min-width: 0;
+  max-width: 270px;
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  height: fit-content;
+  overflow-y: auto;
+  aspect-ratio: auto;
+  background-size: 100% 100%;
+  background-position: center center;
+  background-repeat: no-repeat;
+}
+
+.step-card.active {
+  opacity: 1;
+}
+
+.step-card.completed {
+  opacity: 0.85;
+}
+
+/* 步骤内容 */
+.step-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  min-height: 430px;
+  text-align: center;
+  padding: 20px;
+}
+
+.step-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #000;
+  margin-bottom: 15px;
+  margin-top: 20px;
+  font-family: "KaiTi", "STKaiti", "SimKai", serif;
+  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+.step-description {
+  font-size: 14px;
+  color: #333;
+  line-height: 1.8;
+  margin-bottom: 20px;
+  font-family: "KaiTi", "STKaiti", "SimKai", serif;
+  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+  flex: 1;
+  display: flex;
+  flex-direction: column-reverse;
+}
+
+/* 技艺选择网格 */
+.skills-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+  margin-top: auto;
+}
+
+.skill-card {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.skill-card:hover {
+  border-color: #c8102e;
+  background: #fff5f5;
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(200, 16, 46, 0.2);
+}
+
+.skill-icon {
+  font-size: 22px;
+}
+
+.skill-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: #333;
+  font-family: "KaiTi", "STKaiti", "SimKai", serif;
+}
+
+/* 已选择状态 */
+.selected-skill,
+.uploaded-work {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+  background: rgba(240, 249, 255, 0.9);
+  border: 2px solid #c8102e;
+  border-radius: 6px;
+  color: #c8102e;
+  font-weight: 600;
+  margin-bottom: 15px;
+  font-size: 12px;
+  font-family: "KaiTi", "STKaiti", "SimKai", serif;
+}
+
+.check-icon {
+  font-size: 20px;
+}
+
+/* 上传区域 */
+.upload-section {
+  margin-top: auto;
+}
+
+.upload-zone {
+  border: 2px dashed #d9d9d9;
+  border-radius: 4px;
+  padding: 12px 8px;
+  background: rgba(250, 250, 250, 0.9);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.upload-zone:hover {
+  border-color: #c8102e;
+  background: #fff5f5;
+}
+
+.upload-icon {
+  font-size: 28px;
+  color: #999;
+  margin-bottom: 6px;
+}
+
+.upload-zone p {
+  font-size: 11px;
+  color: #666;
+  margin: 2px 0;
+  font-family: "KaiTi", "STKaiti", "SimKai", serif;
+  line-height: 1.4;
+}
+
+.upload-hint {
+  font-size: 9px;
+  color: #999;
+  font-family: "KaiTi", "STKaiti", "SimKai", serif;
+}
+
+/* 分析进度 */
+.analysis-progress {
+  margin: 15px 0;
+  margin-top: auto;
+}
+
+.progress-text {
+  font-size: 13px;
+  color: #c8102e;
+  margin-bottom: 8px;
+  font-weight: 600;
+  font-family: "KaiTi", "STKaiti", "SimKai", serif;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: #f0f0f0;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #c8102e 0%, #ff4444 100%);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* 分析结果 */
+.analysis-result {
+  margin: 15px 0;
+  margin-top: auto;
+  padding: 10px;
+  background: rgba(249, 249, 249, 0.9);
+  border-radius: 6px;
+  text-align: left;
+}
+
+.result-score {
+  font-size: 13px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 8px;
+  font-family: "KaiTi", "STKaiti", "SimKai", serif;
+}
+
+.score-value {
+  color: #c8102e;
+  font-size: 18px;
+  font-family: "KaiTi", "STKaiti", "SimKai", serif;
+}
+
+.result-details {
+  margin-top: 8px;
+}
+
+.detail-item {
+  font-size: 11px;
+  color: #666;
+  margin-bottom: 4px;
+  padding-left: 14px;
+  position: relative;
+  font-family: "KaiTi", "STKaiti", "SimKai", serif;
+}
+
+.detail-item::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: #c8102e;
+  font-weight: bold;
+}
+
+/* 第四步：获得建议 - 触发区 */
+.advice-trigger {
+  margin-top: auto;
+  padding: 16px 0;
+}
+
+.advice-trigger-text {
+  font-size: 14px;
+  color: #333;
+  margin-bottom: 12px;
+  font-family: "KaiTi", "STKaiti", "SimKai", serif;
+}
+
+.advice-open-btn {
+  min-width: 140px;
+}
+
+/* AI建议弹框 - 蒙层与进入动画 */
+.advice-modal-wrap.ant-modal-wrap {
+  animation: advice-mask-fade 0.3s ease-out;
+}
+
+.advice-modal-wrap .ant-modal {
+  padding-bottom: 0;
+}
+
+.advice-modal-wrap .ant-modal-content {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(200, 16, 46, 0.08);
+  animation: advice-modal-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.advice-modal .ant-modal-body {
+  padding: 0;
+  max-height: 75vh;
+  overflow-y: auto;
+}
+
+.advice-modal .ant-modal-close {
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(200, 16, 46, 0.08);
+  color: #333;
+}
+
+.advice-modal .ant-modal-close:hover {
+  background: rgba(200, 16, 46, 0.15);
+  color: #c8102e;
+}
+
+@keyframes advice-mask-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes advice-modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 弹框内部结构 */
+.advice-modal-inner {
+  display: flex;
+  flex-direction: column;
+  min-height: 200px;
+}
+
+.advice-modal-header {
+  text-align: center;
+  padding: 28px 24px 20px;
+  background: linear-gradient(180deg, #fff8f8 0%, #ffffff 100%);
+  border-bottom: 2px solid rgba(200, 16, 46, 0.12);
+}
+
+.advice-modal-icon {
+  display: inline-block;
+  font-size: 36px;
+  margin-bottom: 8px;
+  animation: advice-icon-pulse 2s ease-in-out infinite;
+}
+
+.advice-modal-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 6px;
+  font-family: "KaiTi", "STKaiti", "SimKai", serif;
+  letter-spacing: 1px;
+}
+
+.advice-modal-subtitle {
+  font-size: 13px;
+  color: #888;
+  margin: 0;
+  font-family: "KaiTi", "STKaiti", "SimKai", serif;
+}
+
+@keyframes advice-icon-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.9;
+  }
+}
+
+.advice-modal-content {
+  padding: 20px 24px 24px;
+  text-align: left;
+}
+
+/* 内容块依次入场动画 */
+.advice-anim-block {
+  opacity: 0;
+  animation: advice-block-in 0.5s ease-out forwards;
+}
+
+.advice-modal-content .advice-anim-block:nth-child(1) { animation-delay: 0.1s; }
+.advice-modal-content .advice-anim-block:nth-child(2) { animation-delay: 0.2s; }
+.advice-modal-content .advice-anim-block:nth-child(3) { animation-delay: 0.3s; }
+.advice-modal-content .advice-anim-block:nth-child(4) { animation-delay: 0.4s; }
+.advice-modal-content .advice-anim-block:nth-child(5) { animation-delay: 0.5s; }
+.advice-modal-content .advice-anim-block:nth-child(6) { animation-delay: 0.6s; }
+
+@keyframes advice-block-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 综合评分 - 弹框内 */
+.advice-modal-score {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #fff5f5 0%, #fefcf8 100%);
+  border-radius: 12px;
+  border: 1px solid rgba(200, 16, 46, 0.18);
+  box-shadow: 0 2px 12px rgba(200, 16, 46, 0.06);
+}
+
+.advice-modal-score .score-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: #555;
+  font-family: "KaiTi", "STKaiti", "SimKai", serif;
+}
+
+.advice-modal-score .score-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #c8102e;
+  font-family: "KaiTi", "STKaiti", "SimKai", serif;
+  letter-spacing: 1px;
+}
+
+/* 弹框内区块通用 */
+.advice-modal-content .advice-section {
+  margin-bottom: 16px;
+  padding: 18px 20px;
+  background: #fafafa;
+  border-radius: 12px;
+  border-left: 4px solid #c8102e;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.advice-modal-content .advice-section:hover {
+  transform: translateX(2px);
+  box-shadow: 0 4px 16px rgba(200, 16, 46, 0.08);
+}
+
+.advice-modal-content .advice-section:last-child {
+  margin-bottom: 0;
+}
+
+.advice-section h4 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 12px;
+  font-family: "KaiTi", "STKaiti", "SimKai", serif;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.advice-section .section-icon {
+  color: #c8102e;
+  font-size: 12px;
+}
+
+.advice-section ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.advice-section li {
+  font-size: 14px;
+  color: #555;
+  margin-bottom: 8px;
+  padding-left: 22px;
+  position: relative;
+  line-height: 1.65;
+  font-family: "KaiTi", "STKaiti", "SimKai", serif;
+}
+
+.advice-section li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: #c8102e;
+  font-weight: bold;
+  font-size: 13px;
+}
+
+.advice-modal-content .learning-plan {
+  background: linear-gradient(135deg, #fff8f8 0%, #fefcf8 100%);
+  border-left-color: #c8102e;
+}
+
+.plan-items {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.plan-item {
+  font-size: 13px;
+  color: #555;
+  line-height: 1.8;
+  font-family: "KaiTi", "STKaiti", "SimKai", serif;
+}
+
+.plan-item strong {
+  color: #333;
+  font-weight: 600;
+  margin-right: 6px;
+}
+
+/* 弹框底部按钮 */
+.advice-modal-footer {
+  padding: 16px 24px 24px;
+  text-align: center;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  background: #fafafa;
+}
+
+.advice-close-btn {
+  min-width: 120px;
+  height: 40px;
+  padding: 0 24px;
+  background: #c8102e !important;
+  border: none !important;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: "KaiTi", "STKaiti", "SimKai", serif;
+  box-shadow: 0 4px 12px rgba(200, 16, 46, 0.25);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.advice-close-btn:hover {
+  background: #a00e24 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(200, 16, 46, 0.3);
+}
+
+/* 保留步骤内 advice 相关（若别处引用） */
+.advice-score {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #fff5f5 0%, #fefcf8 100%);
+  border-radius: 8px;
+  border: 1px solid rgba(200, 16, 46, 0.2);
+}
+
+.advice-score .score-value {
+  color: #c8102e;
+  font-size: 20px;
+}
+
+/* 步骤操作按钮 */
+.step-action-btn {
+  height: 32px;
+  padding: 0 16px;
+  background: #c8102e;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 10px;
+  font-family: "KaiTi", "STKaiti", "SimKai", serif;
+}
+
+.step-action-btn:hover {
+  background: #a00e24;
+}
+
+/* 连接线 */
+.step-connector {
+  width: auto;
+  height: 100%;
+  margin: 0;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+  align-self: stretch;
+  min-height: 430px;
+  max-height: 430px;
+}
+
+.connector-line {
+  width: 60px;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  margin: 0 -1px;
+}
+
+/* 重置按钮 */
+.reset-section {
+  text-align: center;
+  margin-top: 20px;
+  margin-bottom: 120px;
+  flex-shrink: 0;
+}
+
+/* 响应式设计 */
+@media (max-width: 1400px) {
+  .step-card {
+    max-width: 240px;
+    padding: 15px;
+  }
+
+  .step-icon {
+    width: 100px;
+    height: 100px;
+  }
+
+  .connector-line {
+    height: 150px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .steps-container {
+    gap: 10px;
+  }
+
+  .step-card {
+    max-width: 200px;
+    padding: 12px;
+  }
+
+  .step-title {
+    font-size: 16px;
+  }
+
+  .step-description {
+    font-size: 12px;
+  }
+  
+  .plan-items {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .ai-learn-page {
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .steps-container {
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .step-card {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .step-connector {
+    height: auto;
+  }
+
+  .connector-line {
+    height: 60px;
+  }
+
+  .page-title {
+    font-size: 32px;
+  }
+
+  .header-frame {
+    padding: 15px 30px;
+  }
+  
+  .advice-section {
+    padding: 12px;
+  }
+  
+  .advice-section h4 {
+    font-size: 15px;
+  }
+  
+  .advice-section li {
+    font-size: 12px;
+  }
+  
+  .plan-item {
+    font-size: 12px;
+  }
+}

@@ -1,0 +1,22 @@
+<view class="container">
+  <view class="header">
+    <text class="title">我的学习记录</text>
+    <button class="clear-btn" bindtap="clearRecords" wx:if="{{records.length > 0}}">清空</button>
+  </view>
+
+  <view class="record-list" wx:if="{{records.length > 0}}">
+    <view class="record-item" wx:for="{{records}}" wx:key="id">
+      <image class="record-image" src="{{item.imageUrl}}" mode="aspectFill" data-url="{{item.imageUrl}}" bindtap="previewRecordImage"></image>
+      <view class="record-main">
+        <text class="record-skill">{{item.skillName}}</text>
+        <text class="record-score">相似度 {{item.score}}%</text>
+        <text class="record-time">{{item.displayTime}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty" wx:else>
+    <text class="empty-title">还没有学习记录</text>
+    <text class="empty-desc">去学习中心完成一次学艺后会自动保存。</text>
+  </view>
+</view>

@@ -1,0 +1,44 @@
+<!--pages/login/login.wxml-->
+<view class="container">
+  <view class="header">
+    <text class="title">账号登录</text>
+    <text class="subtitle">使用与 Web 端相同的账号密码登录</text>
+  </view>
+
+  <view class="form-card">
+    <view class="form-item">
+      <text class="label">账号</text>
+      <input 
+        class="input"
+        type="text"
+        placeholder="请输入账号"
+        value="{{email}}"
+        bindinput="onEmailInput"
+      />
+    </view>
+
+    <view class="form-item">
+      <text class="label">密码</text>
+      <input 
+        class="input"
+        type="password"
+        placeholder="请输入密码"
+        value="{{password}}"
+        bindinput="onPasswordInput"
+      />
+    </view>
+
+    <button 
+      class="login-btn"
+      type="primary"
+      loading="{{loading}}"
+      bindtap="handleSubmit"
+    >
+      登录
+    </button>
+
+    <view class="helper">
+      <text class="link" bindtap="navigateToRegister">没有账号？前往注册</text>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,135 @@
+<!--pages/index/index.wxml-->
+<view class="container">
+  <!-- 轮播图区域（从web端移植） -->
+  <view class="carousel-section">
+    <!-- 顶部元数据 -->
+    <view class="carousel-metadata">
+      <text class="carousel-main-title">二十四节气·国画</text>
+      <view class="carousel-meta-info">
+        <view class="meta-item">
+          <text class="meta-label">来源:</text>
+          <text class="meta-value">中国非物质文化遗产保护中心</text>
+        </view>
+        <view class="meta-item">
+          <text class="meta-label">作者:</text>
+          <text class="meta-value">丁鼎</text>
+        </view>
+        <view class="meta-item">
+          <text class="meta-label">创建时间:</text>
+          <text class="meta-value">2025.03.26</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 主图片展示区 -->
+    <view class="carousel-main-display">
+      <view class="carousel-image-wrapper">
+        <image 
+          src="{{images[currentIndex].src}}" 
+          alt="{{images[currentIndex].fullTitle}}" 
+          class="carousel-main-image"
+          mode="aspectFit"
+        />
+        
+        <!-- 导航箭头 -->
+        <view class="carousel-nav-button carousel-nav-prev" bindtap="goToPrevious">
+          <text class="nav-arrow-text">‹</text>
+        </view>
+        <view class="carousel-nav-button carousel-nav-next" bindtap="goToNext">
+          <text class="nav-arrow-text">›</text>
+        </view>
+
+        <!-- 图片标题 -->
+        <view class="carousel-image-title">{{currentImage.fullTitle}}</view>
+
+        <!-- 页码指示 -->
+        <view class="carousel-page-indicator">{{currentIndex + 1}}/{{totalImages}}</view>
+      </view>
+    </view>
+
+    <!-- 缩略图导航区 -->
+    <view class="carousel-thumbnails">
+      <scroll-view class="carousel-thumbnails-scroll" scroll-x="true" scroll-left="{{thumbnailScrollLeft}}" scroll-with-animation="true">
+        <view class="carousel-thumbnails-container">
+          <view 
+            wx:for="{{visibleThumbnails}}" 
+            wx:key="index"
+            class="carousel-thumbnail {{item.index === currentIndex ? 'active' : ''}}"
+            bindtap="goToImage"
+            data-index="{{item.index}}"
+          >
+            <image 
+              src="{{item.src}}" 
+              alt="{{item.fullTitle}}" 
+              class="carousel-thumbnail-image"
+              mode="aspectFill"
+              data-index="{{item.index}}"
+            />
+            <view wx:if="{{item.index === currentIndex}}" class="carousel-thumbnail-border"></view>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+  </view>
+
+  <!-- 分类导航 -->
+  <view class="category-section">
+    <view class="section-header">
+      <text class="section-title">非遗类别</text>
+      <text class="section-more" bindtap="navigateToGallery">更多 ></text>
+    </view>
+    <view class="category-list">
+      <view class="category-item" wx:for="{{categories}}" wx:key="id"
+            data-category="{{item.id}}" bindtap="navigateToCategory">
+        <view class="category-icon-wrapper">
+          <text class="category-icon">{{item.icon}}</text>
+        </view>
+        <text class="category-name">{{item.name}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 功能入口 -->
+  <view class="feature-section">
+    <view class="section-header">
+      <text class="section-title">特色功能</text>
+    </view>
+    <view class="feature-grid">
+      <view class="feature-item" wx:for="{{features}}" wx:key="id"
+            data-url="{{item.url}}" bindtap="navigateToFeature">
+        <view class="feature-icon-wrapper">
+          <text class="feature-icon">{{item.icon}}</text>
+        </view>
+        <text class="feature-name">{{item.name}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 推荐作品 -->
+  <view class="artwork-section" wx:if="{{featuredArtworks.length > 0}}">
+    <view class="section-header">
+      <text class="section-title">推荐作品</text>
+      <text class="section-more" bindtap="navigateToGallery">更多 ></text>
+    </view>
+    <scroll-view class="artwork-scroll" scroll-x="true">
+      <view class="artwork-list">
+        <view class="artwork-item" wx:for="{{featuredArtworks}}" wx:key="id"
+              data-id="{{item.id}}" bindtap="navigateToArtwork">
+          <image src="{{item.imageUrl}}" mode="aspectFill" class="artwork-image" lazy-load="true"></image>
+          <view class="artwork-info">
+            <text class="artwork-title">{{item.title}}</text>
+            <view class="artwork-meta">
+              <text class="artwork-category">{{item.category}}</text>
+              <text class="artwork-stats">
+                <text>❤️</text>
+                {{item.likesCount || 0}}
+              </text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+</view>
+

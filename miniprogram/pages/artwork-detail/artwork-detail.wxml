@@ -1,0 +1,28 @@
+<!--pages/artwork-detail/artwork-detail.wxml-->
+<view class="container" wx:if="{{artwork}}">
+  <!-- 作品图片 -->
+  <view class="image-section" bindtap="previewImage">
+    <image src="{{artwork.imageUrl}}" mode="aspectFit" class="artwork-image" lazy-load="true"></image>
+  </view>
+
+  <!-- 作品信息 -->
+  <view class="info-section">
+    <view class="title-row">
+      <text class="artwork-title">{{artwork.title}}</text>
+      <view class="category-tag">{{artwork.category}}</view>
+    </view>
+    <text class="artwork-description" wx:if="{{artwork.description}}">{{artwork.description}}</text>
+    
+    <view class="meta-row">
+      <view class="meta-item">
+        <text>👁️</text>
+        <text class="meta-text">浏览 {{artwork.views || 0}}</text>
+      </view>
+    </view>
+  </view>
+</view>
+
+<view class="loading" wx:if="{{loading}}">
+  <text>加载中...</text>
+</view>
+

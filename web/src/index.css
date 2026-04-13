@@ -1,0 +1,161 @@
+/* ============================================
+   UI/UX Design Spec v2.0 - 全局样式系统
+   定位：沉浸式 · 滚动叙事 · 高端文化科技产品
+   ============================================ */
+
+:root {
+  /* ========== 传统中国艺术风格配色 ========== */
+  /* 主色 - 传统棕色系 */
+  --primary-color: #8b6f47;
+  --primary-dark: #6b5d4f;
+  --secondary-color: #a67c52;
+  
+  /* 强调色 - 中国红 */
+  --accent-color: #c8102e;
+  --accent-red: #d32f2f;
+  
+  /* AI 蓝色和金色 */
+  --ai-blue: #5cc8ff;
+  --gold: #d4af37;
+  
+  /* 渐变系统 */
+  --gradient-primary: linear-gradient(135deg, #8b6f47 0%, #6b5d4f 100%);
+  --gradient-accent: linear-gradient(135deg, #c8102e 0%, #a00e24 100%);
+  --gradient-soft: linear-gradient(135deg, rgba(139, 111, 71, 0.08) 0%, rgba(107, 93, 79, 0.08) 100%);
+  --gradient-paper: linear-gradient(180deg, #fefcf8 0%, #faf9f6 100%);
+  --gradient-gold: linear-gradient(135deg, #d4af37 0%, #b8941f 100%);
+  
+  /* 阴影系统 */
+  --shadow-xs: 0 1px 4px rgba(139, 111, 71, 0.08);
+  --shadow-sm: 0 2px 8px rgba(139, 111, 71, 0.1);
+  --shadow-md: 0 4px 16px rgba(139, 111, 71, 0.15);
+  --shadow-lg: 0 8px 32px rgba(139, 111, 71, 0.2);
+  --shadow-xl: 0 12px 48px rgba(139, 111, 71, 0.3);
+  
+  /* 文字颜色 */
+  --text-primary: #2c2416;
+  --text-secondary: #5a4a3a;
+  --text-tertiary: #8b7355;
+  --text-disabled: #bfbfbf;
+  
+  /* 背景颜色 - 亮色主题 */
+  --bg-primary: #ffffff;
+  --bg-secondary: #faf9f6;
+  --bg-tertiary: #f5f5e6;
+  --bg-paper: #fefcf8;
+  --bg-brown: #8b6f47;
+  --bg-brown-dark: #6b5d4f;
+  
+  /* 边框颜色 */
+  --border-color: #e8e0d6;
+  --border-brown: #c4b5a0;
+  --border-light: #f0f0f0;
+  
+  /* 动画时序 */
+  --fast: 150ms;
+  --base: 300ms;
+  --slow: 600ms;
+  
+  /* 缓动函数 - 顺滑、慢、不急，禁止弹跳 */
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-slow: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  
+  /* 字体系统 */
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 
+                 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  
+  /* 间距系统（基于8px网格） */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+  --spacing-3xl: 64px;
+  --spacing-4xl: 80px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-family);
+  color: var(--text-primary);
+  overflow-x: hidden;
+  line-height: 1.6;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* 全局滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 111, 71, 0.5);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 111, 71, 0.7);
+}
+
+/* 全局动画工具类 */
+.fade-in {
+  animation: fadeIn var(--base) var(--ease-smooth);
+}
+
+.fade-in-up {
+  animation: fadeInUp var(--base) var(--ease-smooth);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 禁止选择文本（某些装饰元素） */
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
