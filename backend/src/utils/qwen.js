@@ -121,6 +121,81 @@ async function generateQwenLearnAnalysis({
   }
 }
 
+/**
+ * 使用 Qwen 视觉模型识别非遗图片内容（固定 prompt）
+ * @param {Object} params
+ * @param {string} params.imageUrl
+ * @returns {Promise<Object|null>}
+ */
+async function generateQwenRecognitionAnalysis({ imageUrl }) {
+  const apiKey = process.env.QWEN_API_KEY || process.env.DASHSCOPE_API_KEY;
+  if (!apiKey || /^your_/i.test(apiKey)) {
+    console.log('⚠️ [Qwen Recognize] 未配置 QWEN_API_KEY，跳过大模型识别');
+    return null;
+  }
+
+  if (!imageUrl || typeof imageUrl !== 'string') {
+    return null;
+  }
+
+  const model = process.env.QWEN_RECOGNIZE_MODEL || 'qwen-vl-plus';
+  const baseURL = process.env.QWEN_BASE_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+
+  const systemPrompt = `你是一位中国非遗研究专家。你会根据图片内容，识别最可能的非遗类别与工艺特征，并输出简洁、可信、可读的中文结论。\n\n必须只返回 JSON，不要返回 markdown，不要返回额外解释。\nJSON 结构必须为：\n{\n  "title": "作品名称（若未知可概括命名）",\n  "category": "非遗类别",\n  "description": "作品简述（40-90字）",\n  "technique": "核心技法",\n  "history": "历史与传承简述（30-80字）",\n  "culturalSignificance": "文化价值说明（30-80字）",\n  "confidence": 0-100\n}`;
+
+  const userPrompt = `请识别这张非遗相关图片，并严格按指定 JSON 输出。若无法精确判断，请给出最合理的保守推断，并在描述中体现不确定性。`;
+
+  try {
+    const openai = new OpenAI({
+      apiKey,
+      baseURL,
+    });
+
+    const completion = await createQwenCompletion(openai, {
+      model,
+      temperature: 0.2,
+      max_tokens: 1200,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: userPrompt },
+            { type: 'image_url', image_url: { url: imageUrl } },
+          ],
+        },
+      ],
+    });
+
+    const content = completion?.choices?.[0]?.message?.content;
+    const jsonText = extractJsonText(content);
+    if (!jsonText) {
+      console.warn('⚠️ [Qwen Recognize] 返回内容为空');
+      return null;
+    }
+
+    const parsed = JSON.parse(jsonText);
+
+    return {
+      provider: 'qwen',
+      model,
+      title: parsed?.title || '非遗作品',
+      category: parsed?.category || '传统美术',
+      description: parsed?.description || '这是一件具有传统工艺特征的非遗作品。',
+      technique: parsed?.technique || '传统手工制作',
+      history: parsed?.history || '该技艺具有长期历史传承。',
+      culturalSignificance: parsed?.culturalSignificance || '体现地方文化记忆与审美价值。',
+      confidence: Number.isFinite(parsed?.confidence)
+        ? Math.max(0, Math.min(100, Math.round(parsed.confidence)))
+        : 65,
+    };
+  } catch (error) {
+    console.error('❌ [Qwen Recognize] 调用失败:', error.message);
+    return null;
+  }
+}
+
 module.exports = {
   generateQwenLearnAnalysis,
+  generateQwenRecognitionAnalysis,
 };

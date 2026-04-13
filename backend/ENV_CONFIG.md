@@ -30,6 +30,7 @@ DEEPSEEK_API_KEY=your_deepseek_api_key_here
 QWEN_API_KEY=your_qwen_api_key_here
 QWEN_MODEL=qwen3.6-plus
 QWEN_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+QWEN_RECOGNIZE_MODEL=qwen-vl-plus
 QWEN_IMAGE_MODEL=qwen-image-edit-plus
 QWEN_IMAGE_MODEL_CHAIN=qwen-image-edit-plus,wanx-v1,wan2.6-image
 
@@ -72,6 +73,7 @@ MINIPROGRAM_SECRET=your_miniprogram_secret
 - **QWEN_API_KEY**: 阿里 DashScope 的 API Key，用于 AI 学艺主分析（推荐）
 - **QWEN_MODEL**: Qwen 模型名，默认 `qwen3.6-plus`
 - **QWEN_BASE_URL**: Qwen OpenAI 兼容接口地址，默认 `https://dashscope.aliyuncs.com/compatible-mode/v1`
+- **QWEN_RECOGNIZE_MODEL**: 小程序图片识别所用视觉模型，默认 `qwen-vl-plus`（AI失败自动回退旧识别逻辑）
 - **QWEN_IMAGE_MODEL**: 数字焕新图像增强模型，默认 `qwen-image-edit-plus`（AI 失败自动回退本地算法融合）
 - **QWEN_IMAGE_MODEL_CHAIN**: 数字焕新视觉模型调用顺序（逗号分隔）。默认按性能顺序：`qwen-image-edit-plus,wanx-v1,wan2.6-image`，前一模型失败时自动尝试下一模型。
 - **VOLCENGINE_ACCESS_KEY/SECRET_KEY**: 火山引擎访问密钥，用于即梦图生图/文生图接口签名，部署前必填

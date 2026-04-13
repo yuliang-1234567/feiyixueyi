@@ -9,6 +9,7 @@ Page({
     analyzing: false,
     analysisResult: null,
     aiAdvice: null,
+    aiMeta: null,
     skills: [
       { id: 'peking-opera', name: '京剧', icon: '🎭' },
       { id: 'paper-cutting', name: '剪纸', icon: '✂️' },
@@ -96,10 +97,11 @@ Page({
         });
       });
 
-      const aiAdvice = this.handleGetAdvice(uploadRes.data || {});
+      const backendData = uploadRes.data || {};
+      const aiAdvice = this.handleGetAdvice(backendData);
       const analysisResult = {
-        ...(uploadRes.data || {}),
-        similarity: aiAdvice?.score || 0
+        ...backendData,
+        similarity: aiAdvice?.score || backendData?.similarity || 0
       };
 
       this.saveLearningRecord({
@@ -108,7 +110,13 @@ Page({
         imageUrl: filePath
       });
 
-      this.setData({ analysisResult, aiAdvice, analyzing: false, currentStep: 4 });
+      this.setData({
+        analysisResult,
+        aiAdvice,
+        aiMeta: backendData?.ai || null,
+        analyzing: false,
+        currentStep: 4
+      });
       wx.showToast({ title: '分析完成', icon: 'success' });
     } catch (error) {
       wx.showToast({ title: error.message || '分析失败，请重试', icon: 'none' });
@@ -136,6 +144,7 @@ Page({
       userWork: null,
       analysisResult: null,
       aiAdvice: null,
+      aiMeta: null,
       analyzing: false
     });
   },
@@ -144,31 +153,48 @@ Page({
     try {
       if (analysisData?.advice) return analysisData.advice;
 
-      const strengthsOptions = ['作品整体结构完整', '细节处理较为精细', '传统元素运用得当', '色彩搭配和谐', '技艺表现熟练', '创意表达独特'];
-      const improvementsOptions = ['建议加强线条的流畅性', '可以尝试更丰富的色彩搭配', '注意保持传统风格的统一性', '细节处理可以更加精细', '构图可以更加合理', '可以尝试更多传统元素的运用'];
-      const learningPlanOptions = {
-        direction: ['继续深入学习传统技艺', '探索传统与现代的结合', '专注于某一细分领域'],
-        professional: ['建议参考大师作品', '参加专业培训课程', '研究传统文献资料'],
-        skills: ['重点练习基础技法', '加强创新能力培养', '提升审美水平'],
-        mentor: ['可以寻找专业导师指导', '加入相关艺术社群', '参与行业交流活动']
+      const scoreFromBackend = Number(analysisData?.accuracy || analysisData?.score || 60);
+      const stableScore = Math.max(0, Math.min(100, Math.round(scoreFromBackend)));
+      const scoreBand = stableScore >= 80 ? 'high' : stableScore >= 60 ? 'mid' : 'low';
+
+      const strengthsByBand = {
+        high: ['作品整体结构完整', '传统元素运用得当', '细节处理较为精细'],
+        mid: ['作品主题表达清晰', '基础技法较为扎实', '整体风格较为统一'],
+        low: ['完成度较高', '尝试了传统元素表达', '具备继续提升的基础']
       };
 
-      const getRandomItems = (options, count) => {
-        const shuffled = [...options].sort(() => Math.random() - 0.5);
-        return shuffled.slice(0, count);
+      const improvementsByBand = {
+        high: ['可进一步强化个人风格辨识度', '尝试更高难度的细节层次', '加强文化意象表达深度'],
+        mid: ['建议加强线条的流畅性', '细节处理可以更加精细', '构图可以更加合理'],
+        low: ['建议先稳固基础技法训练', '注意作品整体比例与节奏', '建议从经典临摹开始逐步进阶']
       };
 
-      const randomScore = Math.floor(Math.random() * 56) + 40;
-      return {
-        score: randomScore,
-        strengths: getRandomItems(strengthsOptions, 3),
-        improvements: getRandomItems(improvementsOptions, 3),
-        learningPlan: {
-          direction: learningPlanOptions.direction[Math.floor(Math.random() * learningPlanOptions.direction.length)],
-          professional: learningPlanOptions.professional[Math.floor(Math.random() * learningPlanOptions.professional.length)],
-          skills: learningPlanOptions.skills[Math.floor(Math.random() * learningPlanOptions.skills.length)],
-          mentor: learningPlanOptions.mentor[Math.floor(Math.random() * learningPlanOptions.mentor.length)]
+      const plansByBand = {
+        high: {
+          direction: '继续深入学习传统技艺，并形成个人表达体系',
+          professional: '建议对标代表性大师作品进行专题研习',
+          skills: '围绕精细化刻画与文化叙事进行专项训练',
+          mentor: '建议参加传承人工作坊并接受阶段性点评'
+        },
+        mid: {
+          direction: '先稳固核心技法，再逐步尝试创新表达',
+          professional: '建议结合教材与案例进行系统化训练',
+          skills: '重点练习构图、线条与层次关系',
+          mentor: '建议加入同领域学习社群进行互评'
+        },
+        low: {
+          direction: '以基础能力建立为主，循序渐进提升完成度',
+          professional: '建议从经典作品拆解技法路径',
+          skills: '优先训练基础手法与规范流程',
+          mentor: '建议寻找入门导师进行阶段性指导'
         }
+      };
+
+      return {
+        score: stableScore,
+        strengths: strengthsByBand[scoreBand],
+        improvements: improvementsByBand[scoreBand],
+        learningPlan: plansByBand[scoreBand]
       };
     } catch (error) {
       return null;

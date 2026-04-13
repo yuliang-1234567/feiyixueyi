@@ -20,7 +20,8 @@ Page({
     uploading: false,
     recognizing: false,
     result: null,
-    history: []
+    history: [],
+    aiMeta: null
   },
 
   onLoad() {
@@ -66,95 +67,20 @@ Page({
     try {
       const uploadFilePath = await this.prepareUploadFile(this.data.selectedImage);
 
-      // 上传图片
-      const uploadRes = await this.uploadImage(uploadFilePath);
-      if (!uploadRes) {
-        this.setData({ recognizing: false });
-        return;
-      }
-
-      // 调用AR识别API进行图片识别
-      let recognitionResult = null;
-      try {
-        const arRes = await api.post('/ar/recognize', {
-          imageUrl: uploadRes.imageUrl
-        });
-
-        if (arRes.success && arRes.data) {
-          // 如果找到了匹配的AR内容
-          if (arRes.data.content) {
-            const content = arRes.data.content;
-            recognitionResult = {
-              title: content.title || '非遗作品',
-              category: content.category || '传统美术',
-              description: content.description || content.history || '这是一件精美的非遗作品，展现了传统工艺的精湛技艺。',
-              technique: content.technique || '传统手工制作',
-              history: content.history || '具有悠久的历史传承',
-              culturalSignificance: content.culturalSignificance,
-              markerImage: content.markerImage ? api.getImageUrl(content.markerImage) : null
-            };
-          } else if (arRes.data.contents && arRes.data.contents.length > 0) {
-            // 如果有多个可能的匹配，使用第一个
-            const content = arRes.data.contents[0];
-            recognitionResult = {
-              title: content.title || '非遗作品',
-              category: content.category || '传统美术',
-              description: content.description || content.history || '这是一件精美的非遗作品，展现了传统工艺的精湛技艺。',
-              technique: content.technique || '传统手工制作',
-              history: content.history || '具有悠久的历史传承',
-              culturalSignificance: content.culturalSignificance,
-              markerImage: content.markerImage ? api.getImageUrl(content.markerImage) : null
-            };
-          }
-        }
-      } catch (arError) {
-        console.warn('AR识别失败，使用作品匹配:', arError);
-        // AR识别失败时继续使用作品匹配逻辑
-      }
-
-      // 如果没有识别结果，尝试通过作品相似度匹配
-      if (!recognitionResult) {
-        // 获取相关分类的作品进行匹配
-        const artworksRes = await api.get('/artworks', {
-          page: 1,
-          limit: 10,
-          status: 'published'
-        });
-
-        const artworks = artworksRes.data?.artworks || artworksRes.data?.data?.artworks || [];
-        
-        if (artworks.length > 0) {
-          // 随机选择一个作品作为识别结果
-          const randomIndex = Math.floor(Math.random() * artworks.length);
-          const matchedArtwork = artworks[randomIndex];
-          recognitionResult = {
-            title: matchedArtwork.title || '非遗作品',
-            category: matchedArtwork.category || '传统美术',
-            description: matchedArtwork.description || '这是一件精美的非遗作品，展现了传统工艺的精湛技艺。',
-            technique: '传统手工制作',
-            history: '具有悠久的历史传承'
-          };
-        } else {
-          // 默认结果
-          recognitionResult = {
-            title: '非遗作品',
-            category: '传统美术',
-            description: '这是一件精美的非遗作品，展现了传统工艺的精湛技艺。',
-            technique: '传统手工制作',
-            history: '具有悠久的历史传承'
-          };
-        }
-      }
+      const arRes = await this.uploadAndRecognize(uploadFilePath);
+      const recognitionResult = this.parseRecognitionResult(arRes.data || {});
+      const finalImageUrl = normalizeImageUrl(arRes.data?.imageUrl || this.data.selectedImage);
 
       this.setData({
         result: recognitionResult,
+        aiMeta: arRes.data?.ai || null,
         recognizing: false
       });
 
       // 保存到历史记录
       this.saveHistory({
         id: Date.now(),
-        imageUrl: uploadRes.imageUrl,
+        imageUrl: finalImageUrl,
         title: recognitionResult.title,
         time: new Date().toLocaleString('zh-CN')
       });
@@ -174,11 +100,46 @@ Page({
     }
   },
 
-  // 上传图片
-  uploadImage(filePath) {
+  parseRecognitionResult(data) {
+    if (data?.title) {
+      return {
+        title: data.title || '非遗作品',
+        category: data.category || '传统美术',
+        description: data.description || '这是一件精美的非遗作品，展现了传统工艺的精湛技艺。',
+        technique: data.technique || '传统手工制作',
+        history: data.history || '具有悠久的历史传承',
+        culturalSignificance: data.culturalSignificance,
+        confidence: data.confidence
+      };
+    }
+
+    const content = data?.content || (Array.isArray(data?.contents) ? data.contents[0] : null);
+    if (content) {
+      return {
+        title: content.title || '非遗作品',
+        category: content.category || '传统美术',
+        description: content.description || content.history || '这是一件精美的非遗作品，展现了传统工艺的精湛技艺。',
+        technique: content.technique || '传统手工制作',
+        history: content.history || '具有悠久的历史传承',
+        culturalSignificance: content.culturalSignificance,
+        markerImage: content.markerImage ? api.getImageUrl(content.markerImage) : null
+      };
+    }
+
+    return {
+      title: '非遗作品',
+      category: '传统美术',
+      description: '这是一件精美的非遗作品，展现了传统工艺的精湛技艺。',
+      technique: '传统手工制作',
+      history: '具有悠久的历史传承'
+    };
+  },
+
+  // 上传图片并识别（AI主链路）
+  uploadAndRecognize(filePath) {
     return new Promise((resolve, reject) => {
       const token = wx.getStorageSync('token');
-      const apiUrl = API_BASE_URL;
+      const apiUrl = `${API_BASE_URL}/ar/recognize`;
       
       const header = {
         'Content-Type': 'multipart/form-data'
@@ -190,7 +151,7 @@ Page({
       this.setData({ uploading: true });
 
       wx.uploadFile({
-        url: `${apiUrl}/upload`,
+        url: apiUrl,
         filePath: filePath,
         name: 'image',
         header: header,
@@ -198,24 +159,19 @@ Page({
           this.setData({ uploading: false });
           try {
             const data = JSON.parse(res.data);
-            if (data.success && data.data) {
-              const rawUrl = data.data.url || data.data.path;
-              resolve({
-                imageUrl: api.getImageUrl(rawUrl),
-                imagePath: rawUrl,
-                filename: data.data.filename || ''
-              });
+            if (data.success) {
+              resolve(data);
             } else {
-              reject(new Error(data.message || '上传失败'));
+              reject(new Error(data.message || '识别失败'));
             }
           } catch (e) {
-            console.error('解析上传响应失败:', e, res.data);
+            console.error('解析识别响应失败:', e, res.data);
             reject(new Error('解析响应失败'));
           }
         },
         fail: (err) => {
           this.setData({ uploading: false });
-          console.error('上传图片失败:', err);
+          console.error('上传并识别失败:', err);
           reject(err);
         }
       });
