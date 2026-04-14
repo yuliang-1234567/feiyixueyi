@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Card, Form, Input, Button, message } from 'antd';
-import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons';
+import { Lock, Mail, User } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
+import { LucideIcon } from "../components/icons/lucide";
 
 const Register = () => {
   const [loading, setLoading] = useState(false);
@@ -44,7 +45,7 @@ const Register = () => {
               { min: 3, message: '用户名至少3个字符!' },
             ]}
           >
-            <Input prefix={<UserOutlined />} placeholder="用户名" />
+            <Input prefix={<LucideIcon icon={User} />} placeholder="用户名" />
           </Form.Item>
 
           <Form.Item
@@ -54,7 +55,7 @@ const Register = () => {
               { type: 'email', message: '请输入有效的邮箱地址!' },
             ]}
           >
-            <Input prefix={<MailOutlined />} placeholder="邮箱" />
+            <Input prefix={<LucideIcon icon={Mail} />} placeholder="邮箱" />
           </Form.Item>
 
           <Form.Item
@@ -64,14 +65,14 @@ const Register = () => {
               { min: 6, message: '密码至少6个字符!' },
             ]}
           >
-            <Input.Password prefix={<LockOutlined />} placeholder="密码" />
+            <Input.Password prefix={<LucideIcon icon={Lock} />} placeholder="密码" />
           </Form.Item>
 
           <Form.Item
             name="confirmPassword"
             rules={[{ required: true, message: '请确认密码!' }]}
           >
-            <Input.Password prefix={<LockOutlined />} placeholder="确认密码" />
+            <Input.Password prefix={<LucideIcon icon={Lock} />} placeholder="确认密码" />
           </Form.Item>
 
           <Form.Item>

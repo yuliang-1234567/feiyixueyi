@@ -9,6 +9,7 @@
     "axios": "^1.5.0",
     "echarts": "^6.0.0",
     "gsap": "^3.14.2",
+    "lucide-react": "^1.8.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.16.0",

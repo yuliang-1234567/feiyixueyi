@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Form, Input, Button, message, Avatar, Spin } from 'antd';
-import { UserOutlined } from '@ant-design/icons';
+import { User } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import api from '../utils/api';
+import { LucideIcon } from "../components/icons/lucide";
 
 const { TextArea } = Input;
 
@@ -65,7 +66,7 @@ const Profile = () => {
     <div className="page-container">
       <Card>
         <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-          <Avatar size={100} src={userInfo.avatar} icon={<UserOutlined />} />
+          <Avatar size={100} src={userInfo.avatar} icon={<LucideIcon icon={User} />} />
           <h2 style={{ marginTop: '20px' }}>{userInfo.username}</h2>
         </div>
 

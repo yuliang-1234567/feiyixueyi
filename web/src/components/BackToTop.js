@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from 'antd';
-import { ArrowUpOutlined } from '@ant-design/icons';
+import { ArrowUp } from "lucide-react";
+import { LucideIcon } from "./icons/lucide";
 
 /**
  * 回到顶部按钮组件
@@ -51,7 +52,7 @@ const BackToTop = ({
     <Button
       type="primary"
       shape="circle"
-      icon={<ArrowUpOutlined />}
+      icon={<LucideIcon icon={ArrowUp} />}
       onClick={scrollToTop}
       style={{
         position: 'fixed',

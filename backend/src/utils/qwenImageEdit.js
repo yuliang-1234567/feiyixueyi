@@ -45,6 +45,22 @@ function getDashScopeOrigin(baseURL) {
   }
 }
 
+function isPrivateOrLocalhostUrl(url) {
+  try {
+    const parsed = new URL(url);
+    const host = String(parsed.hostname || '').toLowerCase();
+    if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0') return true;
+    // 常见私网/链路本地地址（不做过度复杂的 IP 段判断，先覆盖主要情况）
+    if (host.endsWith('.local')) return true;
+    if (/^10\.\d+\.\d+\.\d+$/.test(host)) return true;
+    if (/^192\.168\.\d+\.\d+$/.test(host)) return true;
+    if (/^172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+$/.test(host)) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 function toBufferFromB64(data) {
   if (!data || typeof data !== 'string') {
     return null;
@@ -241,9 +257,12 @@ async function enhanceImageWithQwen(params) {
 
   // 官方推荐：qwen-image-* 走 multimodal-generation 端点
   const tryQwenImageMultimodal = async (model) => {
-    const imageInput = baseImageUrl && /^https?:\/\//i.test(baseImageUrl)
-      ? baseImageUrl
-      : toDataUrlFromFile(baseImagePath);
+    // 重要：DashScope 会对 localhost/内网 URL 做 SSRF 拦截。开发环境默认走 data-url 内联。
+    const canUseUrl =
+      baseImageUrl &&
+      /^https?:\/\//i.test(baseImageUrl) &&
+      !isPrivateOrLocalhostUrl(baseImageUrl);
+    const imageInput = canUseUrl ? baseImageUrl : toDataUrlFromFile(baseImagePath);
 
     const resp = await axios.post(
       `${dashScopeOrigin}/api/v1/services/aigc/multimodal-generation/generation`,
@@ -285,13 +304,16 @@ async function enhanceImageWithQwen(params) {
   };
 
   const tryDashScopeNativeTask = async (model) => {
-    const imageUrl = baseImageUrl && /^https?:\/\//i.test(baseImageUrl)
-      ? baseImageUrl
-      : toDataUrlFromFile(baseImagePath);
+    // 原生 image2image 接口对 URL 校验更严格；localhost/私网 URL 一律不要传，避免 SSRF/URL error
+    const canUseUrl =
+      baseImageUrl &&
+      /^https?:\/\//i.test(baseImageUrl) &&
+      !isPrivateOrLocalhostUrl(baseImageUrl);
+    const imageUrl = canUseUrl ? baseImageUrl : null;
     const imageDataUrl = toDataUrlFromFile(baseImagePath);
 
-    if (/^data:/i.test(imageUrl)) {
-      console.warn('⚠️ [Qwen-Image] 原生接口使用 data URL，若平台不接受可配置公网域名后重试');
+    if (!imageUrl) {
+      console.warn('⚠️ [Qwen-Image] 原生接口未提供可用公网 URL（localhost/私网会被拦截），将只尝试 data-url 兜底变体');
     }
 
     const headers = {
@@ -301,22 +323,24 @@ async function enhanceImageWithQwen(params) {
     };
 
     const payloadVariants = [
-      {
-        name: 'image_url:http(s)',
-        body: {
-          model,
-          input: { prompt, image_url: imageUrl },
-          parameters: { size: '1024*1024' },
+      ...(imageUrl ? [
+        {
+          name: 'image_url:http(s)',
+          body: {
+            model,
+            input: { prompt, image_url: imageUrl },
+            parameters: { size: '1024*1024' },
+          },
         },
-      },
-      {
-        name: 'image:http(s)',
-        body: {
-          model,
-          input: { prompt, image: imageUrl },
-          parameters: { size: '1024*1024' },
+        {
+          name: 'image:http(s)',
+          body: {
+            model,
+            input: { prompt, image: imageUrl },
+            parameters: { size: '1024*1024' },
+          },
         },
-      },
+      ] : []),
     ];
 
     // 内联数据策略：
@@ -473,6 +497,12 @@ async function enhanceImageWithQwen(params) {
 
     // 通道2：DashScope原生异步任务接口
     try {
+      // wanx/wan2.* 等模型如果没有公网 URL，大概率会被 URL 校验卡住；此时跳过以减少噪声与无效请求
+      if (!isQwenImageFamilyModel(model) && (!baseImageUrl || isPrivateOrLocalhostUrl(baseImageUrl))) {
+        console.warn(`⚠️ [Qwen-Image] 模型 ${model} 需要公网 URL；当前为 localhost/私网，跳过原生接口尝试`);
+        continue;
+      }
+
       const buffer = await tryDashScopeNativeTask(model);
       if (!buffer || buffer.length === 0) {
         console.warn(`⚠️ [Qwen-Image] 模型 ${model} 原生接口返回为空，继续尝试下一个模型`);

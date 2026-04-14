@@ -1,149 +1,98 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Card, Button, Upload, message, Row, Col, Select, Input, Modal, Form, InputNumber, Switch, Typography } from 'antd';
-import { UploadOutlined, ExperimentOutlined, SaveOutlined, ShoppingCartOutlined, SettingOutlined, CheckCircleOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Button, Form, Input, InputNumber, Modal, Select, Spin, Switch, Tag, message } from 'antd';
+import { Save, Wand2 } from "lucide-react";
+import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { useAuthStore } from '../store/authStore';
 import './Transform.css';
+import { LucideIcon } from "../components/icons/lucide";
 
-const { Option } = Select;
 const { TextArea } = Input;
-const { Text } = Typography;
 
-// 预设纹样列表
-const PRESET_PATTERNS = [
-  { id: 'b1', name: '纹样1', path: '/images/ihchina/b1.png' },
-  { id: 'b2', name: '纹样2', path: '/images/ihchina/b2.png' },
-  { id: 'b3', name: '纹样3', path: '/images/ihchina/b3.png' },
-  { id: 'b4', name: '纹样4', path: '/images/ihchina/b4.png' },
-  { id: 'b5', name: '纹样5', path: '/images/ihchina/b5.png' },
-  { id: 'b6', name: '纹样6', path: '/images/ihchina/b6.png' },
-  { id: 'b7', name: '纹样7', path: '/images/ihchina/b7.png' },
-  { id: 'b8', name: '纹样8', path: '/images/ihchina/b8.png' },
-  { id: 'b9', name: '纹样9', path: '/images/ihchina/b9.png' },
-  { id: 'b10', name: '纹样10', path: '/images/ihchina/b10.png' }
+const PRESET_PRODUCTS = [
+  { value: '手机壳', label: '手机壳' },
+  { value: 'T恤', label: 'T恤' },
+  { value: '马克杯', label: '马克杯' },
+  { value: '帆布袋', label: '帆布袋' },
+  { value: '明信片', label: '明信片' },
 ];
 
-// 产品类型（对应后台样机与融合参数）
-const PRODUCT_TYPES = ['T恤', '手机壳', '帆布袋', '明信片', '马克杯'];
+const STYLE_PRESETS = [
+  { value: '水墨', label: '水墨' },
+  { value: '水彩', label: '水彩' },
+  { value: '国潮', label: '国潮' },
+  { value: '工笔', label: '工笔' },
+  { value: '剪纸', label: '剪纸' },
+  { value: '景泰蓝釉彩', label: '景泰蓝釉彩' },
+];
 
-const FILE_BY_TYPE = {
-  'T恤': 'tshirt.png',
-  '手机壳': 'phone-case.png',
-  '帆布袋': 'bag.png',
-  '明信片': 'postcard.png',
-  '马克杯': 'mug.png',
+const TEMPLATE_PLACEHOLDERS = {
+  productCustom: '例如：iPhone17 手机壳、保温杯、帆布托特包',
+  styleCustom: '例如：赛博国风、宋画、敦煌配色',
+  heritageHint: '例如：剪纸、苏绣、景泰蓝、宣纸肌理',
+  description: '示例：孤舟老翁的湖景，远山薄雾，留白高级，水墨层次自然，适合手机壳背板构图',
+  extraPrompt: '示例：无文字无logo、背景简洁、质感真实、边缘留白避开摄像头区',
 };
-
-const PRESET_PRODUCT_OPTIONS = PRODUCT_TYPES.map((type) => ({
-  type,
-  name: type,
-  file: FILE_BY_TYPE[type] || 'default.png',
-  imageUrl: ''
-}));
 
 function Transform() {
   const navigate = useNavigate();
-  const [currentStep, setCurrentStep] = useState(1);
-  const [patternFile, setPatternFile] = useState(null);
-  const [selectedPattern, setSelectedPattern] = useState(null);
-  const [selectedProduct, setSelectedProduct] = useState('手机壳');
-  const [productFile, setProductFile] = useState(null); // 上传的产品底图，与「选择产品」二选一
-  const [productTemplates, setProductTemplates] = useState({ directory: '', directoryNote: '', templates: [] });
+  const location = useLocation();
+  const [form] = Form.useForm();
+
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [purchasing, setPurchasing] = useState(false);
-  const [productModalVisible, setProductModalVisible] = useState(false);
   const [artworkModalVisible, setArtworkModalVisible] = useState(false);
-  const [productForm] = Form.useForm();
   const [artworkForm] = Form.useForm();
   const [previewImage, setPreviewImage] = useState(null);
   const previewRef = useRef(null);
+  const [showOptional, setShowOptional] = useState(true);
 
-  const { user } = useAuthStore();
+  useAuthStore();
 
-  // 加载预设产品列表（含引用目录说明）
+  const query = useMemo(() => new URLSearchParams(location.search || ''), [location.search]);
+  const heritageFromQuery = (query.get('heritage') || query.get('skillName') || query.get('q') || '').trim();
+
   useEffect(() => {
-    api.get('/ai/product-templates')
-      .then((res) => {
-        if (res.data.success && res.data.data) {
-          setProductTemplates(res.data.data);
-        }
-      })
-      .catch(() => {});
-  }, []);
-
-
-  // 处理预设纹样选择
-  const handleSelectPattern = async (pattern) => {
-    try {
-      setSelectedPattern(pattern);
-      setPatternFile(null);
-      setCurrentStep(2);
-      
-      const response = await fetch(`${process.env.PUBLIC_URL || ''}${pattern.path}`);
-      const blob = await response.blob();
-      const file = new File([blob], `${pattern.id}.png`, { type: 'image/png' });
-      setPatternFile(file);
-      message.success(`已选择${pattern.name}`);
-    } catch (error) {
-      console.error('加载预设纹样失败:', error);
-      message.error('加载纹样失败');
+    // 来自“非遗学习/搜索”的灵感：可直接回填（可选项里展示）
+    if (heritageFromQuery) {
+      form.setFieldsValue({ heritageHint: heritageFromQuery });
+      setShowOptional(true);
     }
+  }, [form, heritageFromQuery]);
+
+  const buildProductLabel = (values) => {
+    const preset = String(values.productPreset || '').trim();
+    const custom = String(values.productCustom || '').trim();
+    return custom || preset || '其他';
   };
 
-  // 处理上传纹样
-  const handleUploadPattern = (file) => {
-    setPatternFile(file);
-    setSelectedPattern(null);
-    setCurrentStep(2);
-    message.success('纹样上传成功');
+  const buildStylePrompt = (values) => {
+    const preset = String(values.stylePreset || '').trim();
+    const custom = String(values.styleCustom || '').trim();
+    const style = custom || preset || '';
+    return style;
   };
 
-  // 选择预设产品（使用后台样机底图）
-  const handleSelectProduct = (productType) => {
-    setSelectedProduct(productType);
-    setProductFile(null);
-    setCurrentStep(3);
-  };
-
-  // 上传产品底图（使用自定义图片作为底图）
-  const handleUploadProduct = (file) => {
-    setProductFile(file);
-    setSelectedProduct('其他'); // 融合参数用「其他」
-    setCurrentStep(3);
-    message.success('已选择产品底图');
-  };
-
-  // 生成预览（后台算法融合纹样与产品样机）
   const handleGeneratePreview = async () => {
-    const hasPattern = !!patternFile || !!selectedPattern;
-    if (!hasPattern) {
-      message.warning('请上传或选择纹样图片，算法融合需要纹样与产品样机');
+    const values = form.getFieldsValue();
+    const description = String(values.description || '').trim();
+    if (!description) {
+      message.warning('请先填写“描述”，再生成效果');
       return;
     }
 
     setLoading(true);
     try {
-      const formData = new FormData();
-      let finalPatternFile = patternFile;
-      if (selectedPattern && !patternFile) {
-        const response = await fetch(`${process.env.PUBLIC_URL || ''}${selectedPattern.path}`);
-        const blob = await response.blob();
-        finalPatternFile = new File([blob], `${selectedPattern.id}.png`, { type: 'image/png' });
-      }
-      formData.append('pattern', finalPatternFile);
-      if (productFile) {
-        formData.append('product', productFile);
-        formData.append('productType', selectedProduct);
-      } else {
-        formData.append('productType', selectedProduct);
-      }
+      const payload = {
+        productType: buildProductLabel(values),
+        stylePrompt: buildStylePrompt(values),
+        description: String(values.description || '').trim(),
+        extraPrompt: String(values.extraPrompt || '').trim(),
+        heritageHint: String(values.heritageHint || '').trim(),
+      };
 
-      const response = await api.post('/ai/transform', formData, {
-        timeout: 60000,
-      });
+      const response = await api.post('/ai/generate-product', payload, { timeout: 120000 });
 
       if (response.data.success) {
         const data = response.data.data;
@@ -152,9 +101,7 @@ function Transform() {
         const uploadBase = baseUrl.replace(/\/api\/?$/, '');
         setPreviewImage(`${uploadBase}${data.transformedImageUrl}`);
         message.success('预览生成成功！');
-        setTimeout(() => {
-          previewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 300);
+        setTimeout(() => previewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 200);
       } else {
         message.error(response.data.message || '生成失败');
       }
@@ -184,7 +131,10 @@ function Transform() {
 
       const formData = new FormData();
       formData.append('image', file);
-      formData.append('title', values.title || `数字焕新作品 - ${selectedProduct}`);
+      const current = form.getFieldsValue();
+      const productLabel = buildProductLabel(current);
+      const styleLabel = buildStylePrompt(current);
+      formData.append('title', values.title || `数字焕新作品 - ${productLabel}${styleLabel ? `（${styleLabel}）` : ''}`);
       formData.append('description', values.description || '通过数字焕新功能生成的文创产品');
       formData.append('category', '其他');
       formData.append('tags', '数字焕新,文创产品');
@@ -221,10 +171,13 @@ function Transform() {
               '明信片': '明信片',
               '马克杯': '其他'
             };
-            const productCategory = categoryMap[selectedProduct] || '其他';
+            const current = form.getFieldsValue();
+            const productLabel = buildProductLabel(current);
+            const normalized = productLabel.includes('手机壳') ? '手机壳' : productLabel;
+            const productCategory = categoryMap[normalized] || '其他';
 
             const productData = {
-              name: values.title || `数字焕新作品 - ${selectedProduct}`,
+              name: values.title || `数字焕新作品 - ${productLabel}`,
               description: values.description || '通过数字焕新功能生成的文创产品',
               images: [artworkImageUrl],
               price: parseFloat(values.price),
@@ -278,254 +231,172 @@ function Transform() {
 
   return (
     <div className="transform-page">
-      {/* 页面标题 */}
-      <div className="transform-header">
-        <h1 className="transform-title">数字焕新 - 传统文化的数字化重生</h1>
+      <div className="transform-header transform-header-compact">
+        <div className="transform-header-titleRow">
+          <h1 className="transform-title">数字焕新</h1>
+          <div className="transform-header-actions">
+            <Button size="small" onClick={() => navigate('/heritage-learn')}>去非遗学习</Button>
+            <Button size="small" onClick={() => navigate('/learn')}>去 AI 学艺</Button>
+          </div>
+        </div>
         <p className="transform-subtitle">
-          探索非物质文化遗产在数字时代的创新演绎，体验古老技艺与现代科技的融合
+          选择产品与风格，写下描述，让 AI 直接生成文创效果图。
         </p>
+        {heritageFromQuery ? (
+          <div className="transform-header-tags">
+            <Tag color="blue">来自灵感：{heritageFromQuery}</Tag>
+          </div>
+        ) : null}
       </div>
 
-      <div className="transform-container">
-        {/* 步骤横向展示 */}
-        <Row gutter={[20, 20]} className="steps-row">
-          {/* 第一步：上传纹样 */}
-          <Col xs={24} sm={24} md={8}>
-            <div className={`step-panel step-1 ${currentStep >= 1 ? 'active' : ''}`}>
-                <div className="step-banner">
-                  <div className="step-banner-top"></div>
-                  <h3 className="step-title">第一步: 上传纹样</h3>
-                  <div className="step-banner-bottom"></div>
-                </div>
-                <div className="step-content">
-                  {currentStep >= 1 && (
-                    <>
-                      {/* 预设纹样选择 */}
-                      <div className="preset-patterns">
-                        {PRESET_PATTERNS.map((pattern) => (
-                          <div
-                            key={pattern.id}
-                            className={`preset-pattern-item ${selectedPattern?.id === pattern.id ? 'selected' : ''}`}
-                            onClick={() => handleSelectPattern(pattern)}
-                          >
-                            <img
-                              src={`${process.env.PUBLIC_URL || ''}${pattern.path}`}
-                              alt={pattern.name}
-                              className="preset-pattern-image"
-                            />
-                            {selectedPattern?.id === pattern.id && (
-                              <CheckCircleOutlined className="check-icon" />
-                            )}
-                          </div>
-                        ))}
-                      </div>
+      <div className="transform-container transform-twoPane">
+        {/* 左侧：输入区（尽量单屏，无滚动） */}
+        <div className="transform-leftPane">
+          <div className="transform-card transform-mainCard">
+            <div className="transform-cardTitle">创作参数</div>
+            <Form
+              form={form}
+              layout="vertical"
+              className="transform-form"
+              requiredMark={false}
+            >
+              <div className="transform-grid2">
+                <Form.Item name="productPreset" label="产品（预设）" className="transform-item">
+                  <Select
+                    options={PRESET_PRODUCTS}
+                    placeholder="选择产品"
+                    size="middle"
+                    onChange={() => setResult(null)}
+                  />
+                </Form.Item>
+                <Form.Item name="productCustom" label="产品（自定义，可覆盖预设）" className="transform-item">
+                  <Input
+                    placeholder={TEMPLATE_PLACEHOLDERS.productCustom}
+                    onChange={() => setResult(null)}
+                  />
+                </Form.Item>
+              </div>
 
-                      <div className="skip-pattern">
-                        <Button type="link" onClick={() => setCurrentStep(2)}>
-                          下一步：选择产品类型（生成需先上传或选择纹样）
-                        </Button>
-                      </div>
-                      {/* 或上传自定义纹样 */}
-                      <div className="upload-section">
-                        <Upload
-                          beforeUpload={(file) => {
-                            const isImage = file.type.startsWith('image/');
-                            if (!isImage) {
-                              message.error('只能上传图片文件！');
-                              return false;
-                            }
-                            handleUploadPattern(file);
-                            return false;
-                          }}
-                          showUploadList={false}
-                          accept="image/*"
-                        >
-                          <div className="upload-zone">
-                            <div className="upload-icon-wrapper">
-                              <span className="brush-icon">🖋️</span>
-                            </div>
-                            <p className="upload-text">点击或拖拽文件至此上传纹样</p>
-                            <p className="upload-hint">支持 PNG, JPG格式</p>
-                          </div>
-                        </Upload>
-                        {patternFile && (
-                          <div className="uploaded-pattern">
-                            <CheckCircleOutlined className="check-icon" />
-                            <span>{patternFile.name}</span>
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
-            </div>
-          </Col>
+              <div className="transform-grid2">
+                <Form.Item name="stylePreset" label="风格（预设）" className="transform-item">
+                  <Select
+                    options={STYLE_PRESETS}
+                    placeholder="选择风格"
+                    size="middle"
+                    onChange={() => setResult(null)}
+                  />
+                </Form.Item>
+                <Form.Item name="styleCustom" label="风格（自定义，可覆盖预设）" className="transform-item">
+                  <Input
+                    placeholder={TEMPLATE_PLACEHOLDERS.styleCustom}
+                    onChange={() => setResult(null)}
+                  />
+                </Form.Item>
+              </div>
 
-          {/* 第二步：选择产品或上传产品底图 */}
-          <Col xs={24} sm={24} md={8}>
-            <div className={`step-panel step-2 ${currentStep >= 2 ? 'active' : ''}`}>
-              <div className="step-banner">
-                <div className="step-banner-top"></div>
-                <h3 className="step-title">第二步: 选择或上传产品底图</h3>
-                <div className="step-banner-bottom"></div>
+              <div className="transform-optionalToggle">
+                <Button type="link" onClick={() => setShowOptional((v) => !v)}>
+                  {showOptional ? '收起可选项' : '展开可选项（自定义/灵感/细节）'}
+                </Button>
               </div>
-              <div className="step-content">
-                {currentStep >= 2 && (
-                  <>
-                    <p className="step-hint">选择预设产品将使用对应样机图作为底图；上传产品则使用您上传的图片作为底图，再与纹样融合生成。</p>
-                    {/* 引用资源目录说明 */}
-                    <div className="product-templates-dir">
-                      <strong>预设产品底图引用目录：</strong>
-                      <code>{productTemplates.directory || 'backend/uploads/product-templates'}</code>
-                      <p className="dir-note">{productTemplates.directoryNote || '将对应文件名图片放入该目录即可作为「选择产品」的底图'}</p>
-                      <ul className="template-files-list">
-                        {(productTemplates.templates && productTemplates.templates.length > 0)
-                          ? productTemplates.templates.map((t) => (
-                              <li key={t.type}><code>{t.file}</code>（{t.name}）</li>
-                            ))
-                          : PRESET_PRODUCT_OPTIONS.map((t) => (
-                              <li key={t.type}><code>{t.file}</code>（{t.name}）</li>
-                            ))
-                        }
-                      </ul>
-                    </div>
-                    {/* 选择产品：预设样机列表 */}
-                    <div className="product-select-section">
-                      <span className="product-type-label">选择产品：</span>
-                      <div className="preset-products">
-                        {(productTemplates.templates && productTemplates.templates.length > 0
-                          ? productTemplates.templates
-                          : PRESET_PRODUCT_OPTIONS
-                        ).map((t) => {
-                          const imageUrl = t.imageUrl || (process.env.REACT_APP_API_URL || '').replace(/\/api\/?$/, '') + '/uploads/product-templates/' + t.file;
-                          return (
-                            <div
-                              key={t.type}
-                              className={`preset-product-item ${!productFile && selectedProduct === t.type ? 'selected' : ''}`}
-                              onClick={() => handleSelectProduct(t.type)}
-                            >
-                              <div className="preset-product-image-wrap">
-                                <img src={imageUrl} alt={t.name} className="preset-product-image" onError={(e) => { e.target.style.display = 'none'; }} />
-                              </div>
-                              <span className="preset-product-name">{t.name}</span>
-                              {!productFile && selectedProduct === t.type && <CheckCircleOutlined className="check-icon" />}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    {/* 上传产品底图 */}
-                    <div className="product-upload-section">
-                      <span className="product-type-label">或上传产品底图：</span>
-                      <Upload
-                        beforeUpload={(file) => {
-                          if (!file.type.startsWith('image/')) {
-                            message.error('只能上传图片');
-                            return false;
-                          }
-                          handleUploadProduct(file);
-                          return false;
-                        }}
-                        showUploadList={false}
-                        accept="image/*"
-                      >
-                        <div className="upload-zone upload-zone-product">
-                          <UploadOutlined className="upload-icon" />
-                          <p className="upload-text">点击上传产品底图</p>
-                          <p className="upload-hint">支持 PNG、JPG，将作为融合底图</p>
-                        </div>
-                      </Upload>
-                      {productFile && (
-                        <div className="uploaded-product">
-                          <CheckCircleOutlined className="check-icon" />
-                          <span>{productFile.name}</span>
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          </Col>
 
-          {/* 第三步：生成 */}
-          <Col xs={24} sm={24} md={8}>
-            <div className={`step-panel step-3 ${currentStep >= 2 ? 'active' : ''}`}>
-              <div className="step-banner">
-                <div className="step-banner-top"></div>
-                <h3 className="step-title">第三步: 生成</h3>
-                <div className="step-banner-bottom"></div>
-              </div>
-              <div className="step-content">
-                {currentStep >= 2 && (
-                  <div className="generate-tips">
-                    <p>使用后台算法将纹样融合到产品样机上</p>
-                    <ul>
-                      <li>选择或上传纹样后，选择产品类型即可生成</li>
-                      <li>纹样将按产品形状与位置自动贴合</li>
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </div>
-          </Col>
-        </Row>
+              {showOptional ? (
+                <>
+                  <Form.Item name="heritageHint" label="非遗灵感（可选）" className="transform-item">
+                    <Input
+                      placeholder={TEMPLATE_PLACEHOLDERS.heritageHint}
+                      onChange={() => setResult(null)}
+                    />
+                  </Form.Item>
+                </>
+              ) : null}
 
-        {/* 预览区域 - 显示在步骤下方 */}
-        <div ref={previewRef} className="preview-section">
-          <Row gutter={[40, 40]}>
-            <Col xs={24} lg={16}>
-              <div className="preview-panel">
-                <div className="preview-frame">
-                  <div className="preview-title">焕然一新预览</div>
-                  <div className="preview-content">
-                    {previewImage ? (
-                      <div className="preview-image-wrapper">
-                        <img src={previewImage} alt="预览" className="preview-result-image" />
-                      </div>
-                    ) : (
-                      <div className="preview-placeholder">
-                        <div className="placeholder-bg"></div>
-                        <p className="placeholder-text">预览将在此显示</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </Col>
-            <Col xs={24} lg={8}>
-              <div className="preview-actions">
-                {/* 生成按钮 */}
+              <Form.Item
+                name="description"
+                label="描述（必填）"
+                rules={[{ required: true, message: '请填写描述' }]}
+                className="transform-item"
+              >
+                <TextArea
+                  rows={3}
+                  placeholder={TEMPLATE_PLACEHOLDERS.description}
+                  onChange={() => setResult(null)}
+                />
+              </Form.Item>
+
+              {showOptional ? (
+                <Form.Item name="extraPrompt" label="细节要求（可选）" className="transform-item">
+                  <TextArea
+                    rows={2}
+                    placeholder={TEMPLATE_PLACEHOLDERS.extraPrompt}
+                    onChange={() => setResult(null)}
+                  />
+                </Form.Item>
+              ) : null}
+
+              <div className="transform-formActions">
                 <Button
                   type="primary"
-                  size="large"
-                  icon={<ExperimentOutlined />}
+                  icon={<LucideIcon icon={Wand2} />}
                   loading={loading}
                   onClick={handleGeneratePreview}
                   className="generate-btn"
-                  disabled={!patternFile && !selectedPattern}
                   block
                 >
-                  生成预览
+                  生成效果
                 </Button>
-
-                {/* 生成并保存按钮 */}
-                {result && (
+                {result ? (
                   <Button
-                    type="primary"
-                    size="large"
-                    icon={<SaveOutlined />}
+                    icon={<LucideIcon icon={Save} />}
                     loading={saving}
                     onClick={() => setArtworkModalVisible(true)}
-                    className="save-btn"
+                    className="save-btn secondary"
                     block
                   >
-                    生成并保存
+                    保存/发布
                   </Button>
-                )}
+                ) : null}
               </div>
-            </Col>
-          </Row>
+            </Form>
+          </div>
+
+        </div>
+
+        {/* 右侧：预览区 */}
+        <div className="transform-rightPane" ref={previewRef}>
+          <div className="transform-card preview-card">
+            <div className="preview-head">
+              <div className="preview-title">生成效果</div>
+              {result?.transformSource ? (
+                <div className="preview-badges">
+                  <Tag color="purple">{result.transformSource}</Tag>
+                  {result.ai?.model ? <Tag>{result.ai.model}</Tag> : null}
+                </div>
+              ) : null}
+            </div>
+            <div className="preview-content preview-content-fixed">
+              {previewImage ? (
+                <div className="preview-image-wrapper">
+                  <img src={previewImage} alt="预览" className="preview-result-image" />
+                </div>
+              ) : (
+                <div className="preview-placeholder">
+                  <div className="placeholder-bg"></div>
+                  <p className="placeholder-text">右侧会显示生成结果</p>
+                </div>
+              )}
+
+              {loading ? (
+                <div className="preview-loadingMask" aria-label="正在生成">
+                  <div className="preview-loadingInner">
+                    <Spin size="large" />
+                    <div className="preview-loadingText">正在生成效果图…</div>
+                    <div className="preview-loadingHint">模型需要一点时间来构图与渲染</div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
         </div>
       </div>
 

@@ -521,6 +521,125 @@ router.get('/public-image/:filename', (req, res) => {
   }
 });
 
+// 数字焕新（纯AI生成）：无需上传纹样/底图，基于产品样机 + 风格 + 描述直接生成效果图
+// 依赖 Qwen 图像模型；未配置 Key 时返回 503
+router.post('/generate-product', authenticate, async (req, res) => {
+  try {
+    const rate = checkTransformRateLimit(req.user && req.user.id);
+    if (!rate.allowed) {
+      return res.status(429).json({
+        success: false,
+        message: '请求过于频繁，请稍后再试（数字焕新每分钟最多 10 次）',
+      });
+    }
+
+    const {
+      productType,
+      stylePrompt,
+      description,
+      extraPrompt,
+      heritageHint,
+      config,
+    } = req.body || {};
+
+    const normalizedProductType = String(productType || '').trim() || '其他';
+    const category = (normalizedProductType && PRODUCT_CONFIGS[normalizedProductType]) ? normalizedProductType : '其他';
+
+    // 选择样机底图
+    let templatePath = getProductTemplatePath(category);
+    if (!templatePath) {
+      await ensureDefaultProductTemplate();
+      templatePath = getProductTemplatePath(category);
+    }
+    if (!templatePath) {
+      return res.status(503).json({
+        success: false,
+        message: '缺少产品样机资源，请在 backend/uploads/product-templates/ 下配置 default.png 或对应类型样机图',
+      });
+    }
+
+    // 这里的“编辑提示词”会让模型在样机图上直接生成商品效果
+    const coreDesc = String(description || '').trim();
+    if (!coreDesc) {
+      return res.status(400).json({
+        success: false,
+        message: '请填写描述，用于生成作品主题与元素',
+      });
+    }
+
+    const aiPromptParts = [
+      `请为「${category}」生成一张高质量电商效果图。`,
+      '要求：主体清晰、构图高级、细节丰富、质感真实、背景干净、无水印、无logo。',
+      '图案/画面主题：' + coreDesc,
+    ];
+    if (heritageHint && String(heritageHint).trim()) {
+      aiPromptParts.push('非遗灵感（可参考融入）：' + String(heritageHint).trim());
+    }
+    if (extraPrompt && String(extraPrompt).trim()) {
+      aiPromptParts.push('额外要求：' + String(extraPrompt).trim());
+    }
+
+    const finalAiPrompt = aiPromptParts.join('\n');
+
+    // 尽量提供公网 URL，减少 DashScope 抓取失败
+    const forwardedProto = (req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
+    const proto = forwardedProto || req.protocol;
+    const baseUrl = `${proto}://${req.get('host')}`.replace(/\/$/, '');
+    const templatePublicUrl = `${baseUrl}/uploads/product-templates/${path.basename(templatePath)}`;
+
+    let customConfig = null;
+    if (config) {
+      try {
+        customConfig = typeof config === 'string' ? JSON.parse(config) : config;
+      } catch (e) {
+        console.warn('⚠️ [GenerateProduct] config 解析失败，将忽略:', e.message);
+      }
+    }
+
+    const aiEnhanced = await enhanceImageWithQwen({
+      baseImagePath: templatePath,
+      baseImageUrl: templatePublicUrl,
+      productType: category,
+      stylePrompt,
+      aiPrompt: finalAiPrompt,
+      config: customConfig,
+    });
+
+    if (!aiEnhanced || !aiEnhanced.buffer) {
+      return res.status(503).json({
+        success: false,
+        message: '当前未配置或暂不可用的 AI 图像生成能力（请检查 QWEN_API_KEY / DASHSCOPE_API_KEY）',
+      });
+    }
+
+    const aiFilename = `transform-gen-${Date.now()}-${Math.round(Math.random() * 1E9)}.png`;
+    const aiFilePath = path.join(artworksUploadDir, aiFilename);
+    await fs.promises.writeFile(aiFilePath, aiEnhanced.buffer);
+
+    return res.json({
+      success: true,
+      message: '生成产品图成功',
+      data: {
+        transformedImageUrl: `/uploads/artworks/${aiFilename}`,
+        productType: category,
+        transformSource: 'ai-generate',
+        ai: {
+          provider: aiEnhanced.provider,
+          model: aiEnhanced.model,
+          triedModels: aiEnhanced.triedModels || [aiEnhanced.model],
+        },
+      },
+    });
+  } catch (error) {
+    console.error('❌ [GenerateProduct] 生成失败:', { message: error.message, stack: error.stack });
+    return res.status(500).json({
+      success: false,
+      message: error.message || '生成失败，请稍后重试',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
 // 数字焕新 - 使用后台算法将纹样融合到产品底图（Sharp 合成）
 // 必须上传纹样；产品底图二选一：上传 product 文件，或传 productType 使用预设样机
 router.post('/transform', authenticate, uploadTransform.fields([
@@ -918,6 +1037,7 @@ const PRODUCT_TEMPLATE_FILES = {
   '帆布袋': 'bag.png',
   '明信片': 'postcard.png',
   '马克杯': 'mug.png',
+  '其他': 'default.png',
 };
 const DEFAULT_TEMPLATE_FILE = 'default.png';
 
@@ -947,7 +1067,7 @@ async function ensureDefaultProductTemplate() {
 }
 
 function getProductTemplatePath(productType) {
-  const filename = PRODUCT_TEMPLATE_FILES[productType] || PRODUCT_TEMPLATE_FILES['其他'];
+  const filename = PRODUCT_TEMPLATE_FILES[productType] || DEFAULT_TEMPLATE_FILE;
   const primaryPath = path.join(productTemplatesDir, filename);
   if (fs.existsSync(primaryPath)) return primaryPath;
   const fallbackPath = path.join(productTemplatesDir, DEFAULT_TEMPLATE_FILE);

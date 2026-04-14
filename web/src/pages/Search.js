@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Tabs, Spin, Empty, Card, Row, Col, message } from 'antd';
-import { HeartOutlined, EyeOutlined, CommentOutlined, ShoppingCartOutlined } from '@ant-design/icons';
+import { Eye, Heart, MessageCircle, ShoppingCart } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { getImageUrl } from '../utils/imageUtils';
@@ -9,6 +9,7 @@ import { cartUtils } from '../utils/cart';
 import { getMockArtworks } from '../data/galleryWorksMock';
 import MOCK_ARTWORKS from '../data/galleryWorksMock';
 import './Gallery.css';
+import { LucideIcon } from "../components/icons/lucide";
 
 const Search = () => {
   const [searchParams] = useSearchParams();
@@ -183,9 +184,9 @@ const Search = () => {
                               <div className="gallery-card-info">
                                 <h3 className="gallery-card-title">{artwork.title}</h3>
                                 <div className="gallery-card-stats">
-                                  <span className="stat-item"><EyeOutlined /> {artwork.views || 0}</span>
-                                  <span className="stat-item stat-likes"><HeartOutlined /> {artwork.likesCount || 0}</span>
-                                  <span className="stat-item"><CommentOutlined /> {artwork.commentsCount || 0}</span>
+                                  <span className="stat-item"><LucideIcon icon={Eye} /> {artwork.views || 0}</span>
+                                  <span className="stat-item stat-likes"><LucideIcon icon={Heart} /> {artwork.likesCount || 0}</span>
+                                  <span className="stat-item"><LucideIcon icon={MessageCircle} /> {artwork.commentsCount || 0}</span>
                                 </div>
                               </div>
                             </div>
@@ -219,7 +220,7 @@ const Search = () => {
                                   </div>
                                 }
                                 actions={[
-                                  <ShoppingCartOutlined key="cart" onClick={(e) => handleAddToCart(product, e)} />,
+                                  <LucideIcon key="cart" icon={ShoppingCart} onClick={(e) => handleAddToCart(product, e)} style={{ cursor: "pointer" }} />,
                                 ]}
                               >
                                 <Card.Meta title={product.name} description={`¥${product.price || 0}`} />
@@ -256,9 +257,9 @@ const Search = () => {
                         <div className="gallery-card-info">
                           <h3 className="gallery-card-title">{artwork.title}</h3>
                           <div className="gallery-card-stats">
-                            <span className="stat-item"><EyeOutlined /> {artwork.views || 0}</span>
-                            <span className="stat-item stat-likes"><HeartOutlined /> {artwork.likesCount || 0}</span>
-                            <span className="stat-item"><CommentOutlined /> {artwork.commentsCount || 0}</span>
+                            <span className="stat-item"><LucideIcon icon={Eye} /> {artwork.views || 0}</span>
+                            <span className="stat-item stat-likes"><LucideIcon icon={Heart} /> {artwork.likesCount || 0}</span>
+                            <span className="stat-item"><LucideIcon icon={MessageCircle} /> {artwork.commentsCount || 0}</span>
                           </div>
                         </div>
                       </div>
@@ -294,7 +295,7 @@ const Search = () => {
                             </div>
                           }
                           actions={[
-                            <ShoppingCartOutlined key="cart" onClick={(e) => handleAddToCart(product, e)} />,
+                            <LucideIcon key="cart" icon={ShoppingCart} onClick={(e) => handleAddToCart(product, e)} style={{ cursor: "pointer" }} />,
                           ]}
                         >
                           <Card.Meta title={product.name} description={`¥${product.price || 0}`} />

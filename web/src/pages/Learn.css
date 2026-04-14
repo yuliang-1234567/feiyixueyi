@@ -8,7 +8,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  font-family: "KaiTi", "STKaiti", "SimKai", serif;
+  font-family: var(--font-family);
 }
 
 /* 页面背景装饰 */
@@ -56,18 +56,13 @@
   font-family: "KaiTi", "STKaiti", "SimKai", serif;
 }
 
-/* 确保所有文字使用楷体 */
-.ai-learn-page,
-.ai-learn-page * {
+/* 字体层级：标题/关键数字楷体，正文/表单无衬线（更高级且可读） */
+.ai-learn-page :where(.page-title, .step-title, .advice-modal-title, .score-value) {
   font-family: "KaiTi", "STKaiti", "SimKai", serif;
 }
 
-/* Ant Design 组件字体覆盖 */
-.ai-learn-page .ant-btn,
-.ai-learn-page .ant-upload,
-.ai-learn-page .ant-input,
-.ai-learn-page .ant-select {
-  font-family: "KaiTi", "STKaiti", "SimKai", serif;
+.ai-learn-page :where(.page-subtitle, .step-description, .progress-text, .detail-item, .advice-section, .plan-item, .upload-zone, .skill-name) {
+  font-family: var(--font-family);
 }
 
 /* 步骤容器 */
@@ -101,7 +96,7 @@
   display: flex;
   flex-direction: column;
   height: fit-content;
-  overflow-y: auto;
+  overflow-y: visible;
   aspect-ratio: auto;
   background-size: 100% 100%;
   background-position: center center;
@@ -174,6 +169,11 @@
   box-shadow: 0 4px 12px rgba(200, 16, 46, 0.2);
 }
 
+.skill-card:focus-visible {
+  outline: 2px solid rgba(200, 16, 46, 0.30);
+  outline-offset: 4px;
+}
+
 .skill-icon {
   font-size: 22px;
 }
@@ -224,6 +224,21 @@
 .upload-zone:hover {
   border-color: #c8102e;
   background: #fff5f5;
+}
+
+.upload-zone:focus-visible {
+  outline: 2px solid rgba(200, 16, 46, 0.30);
+  outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skill-card,
+  .upload-zone,
+  .progress-fill,
+  .advice-modal-wrap .ant-modal-content {
+    transition: none !important;
+    animation: none !important;
+  }
 }
 
 .upload-icon {

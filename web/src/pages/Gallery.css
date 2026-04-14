@@ -134,10 +134,9 @@
 }
 
 .gallery-card:hover {
-  /* Hover上浮8px */
-  transform: translateY(-8px);
-  /* 阴影增强 */
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+  border-color: rgba(200, 16, 46, 0.22);
 }
 
 /* 图片区域 - 图片>文字 */
@@ -160,7 +159,21 @@
 }
 
 .gallery-card:hover .gallery-card-image {
-  transform: scale(1.1);
+  transform: scale(1.06);
+}
+
+.gallery-card:focus-visible {
+  outline: 2px solid rgba(200, 16, 46, 0.30);
+  outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gallery-card,
+  .gallery-card::before,
+  .gallery-card-image,
+  .gallery-card-category {
+    transition: none !important;
+  }
 }
 
 .gallery-card-category {

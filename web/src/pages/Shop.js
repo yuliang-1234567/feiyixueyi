@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Card, Row, Col, Pagination, Select, Button, Tag, Spin, Empty, message } from 'antd';
-import { ShoppingCartOutlined } from '@ant-design/icons';
+import { ShoppingCart } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { cartUtils } from '../utils/cart';
 import { getFirstImageUrl, getFallbackImageUrl } from '../utils/imageUtils';
+import { LucideIcon } from "../components/icons/lucide";
+import "./Shop.css";
 
 const { Option } = Select;
 
@@ -16,11 +18,7 @@ const Shop = () => {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
 
-  useEffect(() => {
-    fetchProducts();
-  }, [category, page]);
-
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
       const response = await api.get('/products', {
@@ -37,64 +35,44 @@ const Shop = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [category, page]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
 
   const handleAddToCart = (product) => {
     cartUtils.addToCart(product, 1);
-    message.success('已加入购物车');
+    message.success({
+      content: (
+        <span>
+          已加入购物车
+          <Button
+            type="link"
+            className="shop-toastLink"
+            onClick={() => navigate("/cart")}
+          >
+            去购物车
+          </Button>
+        </span>
+      ),
+      duration: 2.2,
+    });
   };
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      background: 'transparent',
-      padding: '40px 24px',
-      maxWidth: '1400px',
-      margin: '0 auto',
-      position: 'relative'
-    }}>
-      <div style={{
-        textAlign: 'center',
-        marginBottom: '60px',
-        padding: '40px 0'
-      }}>
-        <h1 style={{ 
-          fontSize: '3rem', 
-          fontWeight: 700,
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text',
-          marginBottom: '16px',
-          letterSpacing: '-1px'
-        }}>
-          文创商城
-        </h1>
-        <p style={{
-          fontSize: '1.1rem',
-          color: '#666',
-          maxWidth: '600px',
-          margin: '0 auto'
-        }}>
-          发现独特的非遗文创产品，传承文化之美
-        </p>
+    <div className="shop-page">
+      <div className="shop-hero">
+        <h1 className="shop-title">文创商城</h1>
+        <p className="shop-subtitle">发现独特的非遗文创产品，传承文化之美</p>
       </div>
 
-      <div style={{ 
-        marginBottom: '32px', 
-        textAlign: 'right',
-        display: 'flex',
-        justifyContent: 'flex-end',
-        alignItems: 'center'
-      }}>
+      <div className="shop-toolbar">
         <Select
           value={category}
           onChange={setCategory}
           placeholder="选择类别"
-          style={{ 
-            width: 200,
-            borderRadius: '10px'
-          }}
+          className="shop-categorySelect"
           allowClear
         >
           <Option value="T恤">T恤</Option>
@@ -106,7 +84,7 @@ const Shop = () => {
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '40px' }}>
+        <div className="shop-loading">
           <Spin size="large" />
         </div>
       ) : products.length === 0 ? (
@@ -119,34 +97,16 @@ const Shop = () => {
                 <Card
                   hoverable
                   onClick={() => navigate(`/products/${product.id}`)}
+                  className="shop-productCard"
                   cover={
-                    <div style={{
-                      position: 'relative',
-                      paddingTop: '100%',
-                      background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-                      overflow: 'hidden'
-                    }}>
+                    <div className="shop-cover">
                       <img
                         alt={product.name}
                         src={getFirstImageUrl(product.images) || getFallbackImageUrl()}
-                        style={{ 
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover',
-                          transition: 'transform 0.4s ease'
-                        }}
+                        className="shop-coverImage"
                         onError={(e) => {
                           e.currentTarget.onerror = null;
                           e.currentTarget.src = getFallbackImageUrl();
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.transform = 'scale(1.1)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.transform = 'scale(1)';
                         }}
                       />
                     </div>
@@ -154,73 +114,29 @@ const Shop = () => {
                   actions={[
                     <Button
                       type="primary"
-                      icon={<ShoppingCartOutlined />}
+                      icon={<LucideIcon icon={ShoppingCart} />}
                       onClick={(e) => { e.stopPropagation(); handleAddToCart(product); }}
                       block
-                      style={{
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        border: 'none',
-                        borderRadius: '8px',
-                        height: '40px',
-                        fontWeight: '500'
-                      }}
+                      className="shop-addToCartBtn"
                     >
                       加入购物车
                     </Button>,
                   ]}
-                  style={{
-                    borderRadius: '16px',
-                    boxShadow: '0 2px 12px rgba(0, 0, 0, 0.08)',
-                    border: '1px solid #e8e8e8',
-                    overflow: 'hidden',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-4px)';
-                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.12)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 2px 12px rgba(0, 0, 0, 0.08)';
-                  }}
                 >
                   <Card.Meta
-                    title={<div style={{ 
-                      fontSize: '16px', 
-                      fontWeight: 600,
-                      marginBottom: '8px'
-                    }}>{product.name}</div>}
+                    title={<div className="shop-productName">{product.name}</div>}
                     description={
-                      <div>
-                        <p style={{ 
-                          color: '#666', 
-                          fontSize: '14px',
-                          marginBottom: '12px',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical'
-                        }}>{product.description}</p>
-                        <div style={{ marginTop: '12px' }}>
-                          <Tag style={{
-                            background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)',
-                            color: 'white',
-                            border: 'none',
-                            padding: '4px 12px',
-                            borderRadius: '6px',
-                            fontSize: '16px',
-                            fontWeight: '600'
-                          }}>
-                            ¥{product.price}
-                          </Tag>
+                      <div className="shop-productDescWrap">
+                        <p className="shop-productDesc">{product.description}</p>
+                        <div className="shop-productMeta">
+                          <span className="shop-productMetaItem">免运费</span>
+                          <span className="shop-productMetaDot" aria-hidden="true">·</span>
+                          <span className="shop-productMetaItem">7天退换</span>
+                        </div>
+                        <div className="shop-priceRow">
+                          <Tag className="shop-priceTag">¥{product.price}</Tag>
                           {product.originalPrice && (
-                            <span style={{ 
-                              textDecoration: 'line-through', 
-                              color: '#999', 
-                              marginLeft: '12px',
-                              fontSize: '14px'
-                            }}>
+                            <span className="shop-originalPrice">
                               ¥{product.originalPrice}
                             </span>
                           )}
@@ -232,7 +148,7 @@ const Shop = () => {
               </Col>
             ))}
           </Row>
-          <div style={{ textAlign: 'center', marginTop: '40px' }}>
+          <div className="shop-pagination">
             <Pagination
               current={page}
               total={total}

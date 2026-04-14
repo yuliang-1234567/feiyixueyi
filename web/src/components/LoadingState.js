@@ -1,6 +1,5 @@
 import React from 'react';
 import { Spin } from 'antd';
-import { LoadingOutlined } from '@ant-design/icons';
 
 /**
  * 加载状态组件
@@ -12,8 +11,6 @@ const LoadingState = ({
   fullScreen = false,
   style = {}
 }) => {
-  const antIcon = <LoadingOutlined style={{ fontSize: size === 'large' ? 48 : 24 }} spin />;
-
   if (fullScreen) {
     return (
       <div style={{
@@ -30,7 +27,7 @@ const LoadingState = ({
         zIndex: 9999,
         ...style
       }}>
-        <Spin indicator={antIcon} tip={tip} size={size} />
+        <Spin tip={tip} size={size} />
       </div>
     );
   }
@@ -41,7 +38,7 @@ const LoadingState = ({
       textAlign: 'center',
       ...style
     }}>
-      <Spin indicator={antIcon} tip={tip} size={size} />
+      <Spin tip={tip} size={size} />
     </div>
   );
 };

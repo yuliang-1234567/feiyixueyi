@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Button, InputNumber, Empty, message, Divider } from 'antd';
-import { ShoppingCartOutlined, DeleteOutlined } from '@ant-design/icons';
+import { ShoppingCart, Trash2 } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { cartUtils } from '../utils/cart';
 import api from '../utils/api';
 import { useAuthStore } from '../store/authStore';
 import { getImageUrl } from '../utils/imageUtils';
+import { LucideIcon } from "../components/icons/lucide";
+import "./Cart.css";
 
 // 占位图：无网络请求，图片加载失败或 item.image 为空时使用
 const CART_IMG_PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect fill='%23f0f0f0' width='120' height='120'/%3E%3Ctext x='50%25' y='50%25' fill='%23999' text-anchor='middle' dy='.3em' font-size='12' font-family='sans-serif'%3E暂无图片%3C/text%3E%3C/svg%3E";
@@ -90,32 +92,13 @@ const Cart = () => {
   const totalPrice = cartUtils.getTotalPrice();
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      background: 'linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%)',
-      padding: '40px 24px',
-      maxWidth: '1200px',
-      margin: '0 auto'
-    }}>
-      <div style={{
-        textAlign: 'center',
-        marginBottom: '40px'
-      }}>
-        <h1 style={{ 
-          fontSize: '3rem', 
-          fontWeight: 700,
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text',
-          marginBottom: '16px'
-        }}>
-          购物车
-        </h1>
+    <div className="cart-page">
+      <div className="cart-hero">
+        <h1 className="cart-title">购物车</h1>
       </div>
 
       {cart.length === 0 ? (
-        <Card style={{ borderRadius: '20px', textAlign: 'center', padding: '60px' }}>
+        <Card className="cart-emptyCard">
           <Empty 
             description="购物车是空的"
             image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -123,14 +106,7 @@ const Cart = () => {
             <Button 
               type="primary"
               onClick={() => navigate('/shop')}
-              style={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                border: 'none',
-                borderRadius: '10px',
-                height: '44px',
-                padding: '0 32px',
-                fontWeight: '600'
-              }}
+              className="cart-primaryBtn"
             >
               去购物
             </Button>
@@ -138,15 +114,10 @@ const Cart = () => {
         </Card>
       ) : (
         <>
-          <Card style={{ borderRadius: '20px', marginBottom: '24px' }}>
+          <Card className="cart-listCard">
             {cart.map((item) => (
               <div key={item.id}>
-                <div style={{
-                  display: 'flex',
-                  gap: '20px',
-                  padding: '20px 0',
-                  alignItems: 'center'
-                }}>
+                <div className="cart-itemRow">
                   <img
                     src={getImageUrl(item.image || item.images?.[0]) || CART_IMG_PLACEHOLDER}
                     alt={item.name}
@@ -154,52 +125,27 @@ const Cart = () => {
                       e.target.onerror = null;
                       e.target.src = CART_IMG_PLACEHOLDER;
                     }}
-                    style={{
-                      width: '120px',
-                      height: '120px',
-                      objectFit: 'cover',
-                      borderRadius: '12px',
-                      background: '#f5f5f5'
-                    }}
+                    className="cart-itemImage"
                   />
-                  <div style={{ flex: 1 }}>
-                    <h3 style={{ 
-                      fontSize: '18px', 
-                      fontWeight: 600,
-                      marginBottom: '8px'
-                    }}>
-                      {item.name}
-                    </h3>
-                    <p style={{ 
-                      color: '#666', 
-                      fontSize: '14px',
-                      marginBottom: '12px'
-                    }}>
-                      {item.category}
-                    </p>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <span style={{ 
-                          fontSize: '20px', 
-                          fontWeight: 700,
-                          color: '#ff4444'
-                        }}>
-                          ¥{item.price}
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div className="cart-itemBody">
+                    <h3 className="cart-itemName">{item.name}</h3>
+                    <p className="cart-itemCategory">{item.category}</p>
+                    <div className="cart-itemBottom">
+                      <div className="cart-itemPrice">¥{item.price}</div>
+                      <div className="cart-itemActions">
                         <InputNumber
                           min={1}
                           max={item.stock || 999}
                           value={item.quantity}
                           onChange={(value) => handleQuantityChange(item.id, value)}
-                          style={{ width: '100px' }}
+                          className="cart-qtyInput"
                         />
                         <Button
                           type="text"
                           danger
-                          icon={<DeleteOutlined />}
+                          icon={<LucideIcon icon={Trash2} />}
                           onClick={() => handleRemove(item.id)}
+                          className="cart-removeBtn"
                         >
                           删除
                         </Button>
@@ -212,44 +158,32 @@ const Cart = () => {
             ))}
           </Card>
 
-          <Card style={{ borderRadius: '20px' }}>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '24px'
-            }}>
-              <span style={{ fontSize: '18px', fontWeight: 600 }}>总计：</span>
-              <span style={{ 
-                fontSize: '28px', 
-                fontWeight: 700,
-                background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text'
-              }}>
+          <Card className="cart-summaryCard">
+            <div className="cart-summaryTop">
+              <span className="cart-summaryLabel">总计</span>
+              <span className="cart-summaryValue">
                 ¥{(Number.isFinite(totalPrice) ? totalPrice : 0).toFixed(2)}
               </span>
             </div>
+            <div className="cart-summaryMeta">
+              免运费 · 7天无理由退换
+            </div>
+            <div className="cart-summaryBtns">
+              <Button onClick={() => navigate('/shop')} className="cart-secondaryBtn">
+                继续购物
+              </Button>
             <Button
               type="primary"
               size="large"
               block
               loading={loading}
               onClick={handleCheckout}
-              icon={<ShoppingCartOutlined />}
-              style={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                border: 'none',
-                borderRadius: '12px',
-                height: '50px',
-                fontSize: '18px',
-                fontWeight: '600',
-                boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
-              }}
+              icon={<LucideIcon icon={ShoppingCart} />}
+              className="cart-primaryBtn cart-checkoutBtn"
             >
               结算
             </Button>
+            </div>
           </Card>
         </>
       )}

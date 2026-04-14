@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Row, Col, Button, Tag, Empty, message, Modal, Input, Select, Popconfirm, InputNumber, Pagination } from 'antd';
-import { EyeOutlined, HeartOutlined, CommentOutlined, EditOutlined, DeleteOutlined, PlusOutlined, ShoppingOutlined } from '@ant-design/icons';
+import { Eye, Heart, MessageCircle, Pencil, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { useAuthStore } from '../store/authStore';
 import { getFirstImageUrl } from '../utils/imageUtils';
+import { LucideIcon } from "../components/icons/lucide";
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -189,7 +190,7 @@ const ProductManagement = () => {
         </div>
         <Button 
           type="primary" 
-          icon={<PlusOutlined />}
+          icon={<LucideIcon icon={Plus} />}
           onClick={() => navigate('/transform')}
           size="large"
           style={{
@@ -281,7 +282,7 @@ const ProductManagement = () => {
                     <Button 
                       key="view"
                       type="text" 
-                      icon={<EyeOutlined />} 
+                      icon={<LucideIcon icon={Eye} />}
                       onClick={() => handleViewDetail(product.id)}
                       style={{ color: '#667eea' }}
                     >
@@ -290,7 +291,7 @@ const ProductManagement = () => {
                     <Button 
                       key="edit"
                       type="text" 
-                      icon={<EditOutlined />} 
+                      icon={<LucideIcon icon={Pencil} />}
                       onClick={() => handleEdit(product)}
                       style={{ color: '#52c41a' }}
                     >
@@ -304,7 +305,7 @@ const ProductManagement = () => {
                       okText="确定"
                       cancelText="取消"
                     >
-                      <Button type="text" danger icon={<DeleteOutlined />}>
+                      <Button type="text" danger icon={<LucideIcon icon={Trash2} />}>
                         删除
                       </Button>
                     </Popconfirm>
@@ -362,21 +363,21 @@ const ProductManagement = () => {
                     }}>
                       <div style={{ display: 'flex', gap: '16px', color: '#8c8c8c', fontSize: '13px' }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <ShoppingOutlined style={{ fontSize: '14px' }} /> 
+                          <LucideIcon icon={ShoppingBag} size={14} strokeWidth={1.7} />
                           <span>库存 {product.stock || 0}</span>
                         </span>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <EyeOutlined style={{ fontSize: '14px' }} /> 
+                          <LucideIcon icon={Eye} size={14} strokeWidth={1.7} />
                           <span>{product.views || 0}</span>
                         </span>
                       </div>
                       <div style={{ display: 'flex', gap: '12px', color: '#8c8c8c', fontSize: '13px' }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#ff6b6b' }}>
-                          <HeartOutlined style={{ fontSize: '14px' }} /> 
+                          <LucideIcon icon={Heart} size={14} strokeWidth={1.7} />
                           <span>{product.likesCount || 0}</span>
                         </span>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <CommentOutlined style={{ fontSize: '14px' }} /> 
+                          <LucideIcon icon={MessageCircle} size={14} strokeWidth={1.7} />
                           <span>{product.commentsCount || 0}</span>
                         </span>
                       </div>

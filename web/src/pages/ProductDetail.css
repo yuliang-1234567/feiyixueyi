@@ -46,6 +46,50 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
+.product-thumbs {
+  margin-top: 14px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.product-thumb {
+  appearance: none;
+  border: 1px solid rgba(139, 111, 71, 0.18);
+  background: rgba(254, 252, 248, 0.85);
+  border-radius: 12px;
+  padding: 0;
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 0 10px 26px rgba(44, 36, 22, 0.08);
+  transition: transform var(--base) var(--ease-smooth), border-color var(--base) var(--ease-smooth), box-shadow var(--base) var(--ease-smooth);
+}
+
+.product-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.product-thumb:hover {
+  transform: translateY(-1px);
+  border-color: rgba(200, 16, 46, 0.22);
+  box-shadow: 0 14px 34px rgba(44, 36, 22, 0.12);
+}
+
+.product-thumb-active {
+  border-color: rgba(200, 16, 46, 0.40);
+  box-shadow: 0 14px 34px rgba(200, 16, 46, 0.10);
+}
+
+.product-thumb:focus-visible {
+  outline: 2px solid rgba(200, 16, 46, 0.30);
+  outline-offset: 4px;
+}
+
 .product-main-image {
   position: absolute;
   top: 0;
@@ -181,8 +225,26 @@
 }
 
 .stock-warning {
-  color: #c8102e;
+  font-weight: 700;
+}
+
+.stock-ok {
+  color: rgba(44, 36, 22, 0.72);
   font-weight: 600;
+}
+
+.stock-low {
+  color: rgba(200, 16, 46, 0.92);
+}
+
+.stock-out {
+  color: rgba(44, 36, 22, 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .product-thumb {
+    transition: none;
+  }
 }
 
 /* 数量选择 */

@@ -1,0 +1,205 @@
+/* 作品详情（宋韵纸感统一，替换旧的蓝紫 inline 风格） */
+.artwork-detail-page {
+  min-height: 100vh;
+  background: var(--gradient-paper);
+  padding: 40px 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.artwork-detail-loading {
+  padding: 100px 24px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.artwork-detail-backBtn {
+  margin-bottom: 32px !important;
+  border: 1px solid rgba(139, 111, 71, 0.18) !important;
+  background: rgba(255, 255, 255, 0.84) !important;
+  box-shadow: var(--shadow-sm);
+  border-radius: 12px !important;
+  height: 40px !important;
+  padding: 0 18px !important;
+  font-weight: 800 !important;
+  color: var(--text-primary) !important;
+}
+
+.artwork-detail-backBtn:hover {
+  border-color: rgba(200, 16, 46, 0.22) !important;
+}
+
+.artwork-detail-imageCard {
+  border-radius: 20px !important;
+  box-shadow: var(--shadow-md);
+  border: 1px solid rgba(139, 111, 71, 0.14) !important;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.84) !important;
+}
+
+.artwork-detail-image {
+  width: 100%;
+  border-radius: 16px;
+  background: linear-gradient(
+    135deg,
+    rgba(139, 111, 71, 0.08) 0%,
+    rgba(200, 16, 46, 0.06) 100%
+  );
+}
+
+.artwork-detail-infoCard {
+  border-radius: 20px !important;
+  box-shadow: var(--shadow-md);
+  border: 1px solid rgba(139, 111, 71, 0.14) !important;
+  margin-bottom: 24px !important;
+  background: rgba(255, 255, 255, 0.84) !important;
+}
+
+.artwork-detail-title {
+  font-size: 2rem;
+  font-weight: 900;
+  margin: 0 0 18px;
+  color: var(--text-primary);
+  line-height: 1.4;
+  letter-spacing: -0.4px;
+}
+
+.artwork-detail-tags {
+  margin-bottom: 18px;
+}
+
+.artwork-detail-tagPrimary {
+  font-size: 14px !important;
+  padding: 6px 16px !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(200, 16, 46, 0.16) !important;
+  background: rgba(200, 16, 46, 0.10) !important;
+  color: rgba(200, 16, 46, 0.92) !important;
+  font-weight: 800 !important;
+  margin-right: 8px !important;
+  margin-bottom: 8px !important;
+}
+
+.artwork-detail-tag {
+  font-size: 13px !important;
+  padding: 6px 14px !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(139, 111, 71, 0.14) !important;
+  background: rgba(139, 111, 71, 0.08) !important;
+  color: rgba(44, 36, 22, 0.72) !important;
+  font-weight: 700 !important;
+  margin-right: 8px !important;
+  margin-bottom: 8px !important;
+}
+
+.artwork-detail-desc {
+  color: var(--text-secondary);
+  line-height: 1.9;
+  margin: 0 0 28px;
+  font-size: 15px;
+}
+
+.artwork-detail-commentsCard {
+  margin-top: 32px !important;
+  border-radius: 20px !important;
+  box-shadow: var(--shadow-md);
+  border: 1px solid rgba(139, 111, 71, 0.14) !important;
+  background: rgba(255, 255, 255, 0.84) !important;
+}
+
+.artwork-detail-commentComposer {
+  margin-bottom: 28px;
+  padding: 18px;
+  background: rgba(254, 252, 248, 0.78);
+  border-radius: 16px;
+  border: 1px solid rgba(139, 111, 71, 0.14);
+}
+
+.artwork-detail-commentInput {
+  margin-bottom: 14px !important;
+  border-radius: 12px !important;
+  border: 1px solid rgba(139, 111, 71, 0.18) !important;
+}
+
+.artwork-detail-commentBtn {
+  background: rgba(200, 16, 46, 0.92) !important;
+  border: none !important;
+  border-radius: 12px !important;
+  height: 40px !important;
+  padding: 0 22px !important;
+  font-weight: 800 !important;
+  box-shadow: 0 10px 26px rgba(200, 16, 46, 0.18);
+}
+
+.artwork-detail-commentBtn:hover {
+  background: color-mix(in srgb, rgba(200, 16, 46, 0.92) 82%, black) !important;
+}
+
+.artwork-detail-stats {
+  display: flex;
+  gap: 32px;
+  margin-bottom: 28px;
+  padding: 18px 18px;
+  background: rgba(254, 252, 248, 0.78);
+  border-radius: 16px;
+  border: 1px solid rgba(139, 111, 71, 0.14);
+}
+
+.artwork-detail-statIcon {
+  color: rgba(139, 111, 71, 0.90);
+}
+
+.artwork-detail-statIconLike {
+  color: rgba(200, 16, 46, 0.85);
+}
+
+.artwork-detail-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.artwork-detail-likeBtn {
+  height: 48px !important;
+  border-radius: 12px !important;
+  font-weight: 800 !important;
+  flex: 1 1 220px;
+  border: 1px solid rgba(139, 111, 71, 0.22) !important;
+  background: rgba(254, 252, 248, 0.85) !important;
+  color: var(--text-primary) !important;
+}
+
+.artwork-detail-likeBtn:hover {
+  border-color: rgba(200, 16, 46, 0.22) !important;
+}
+
+.artwork-detail-likeBtnOn {
+  background: rgba(200, 16, 46, 0.92) !important;
+  border: none !important;
+  color: #fff !important;
+}
+
+.artwork-detail-likeBtnOn:hover {
+  background: color-mix(in srgb, rgba(200, 16, 46, 0.92) 82%, black) !important;
+}
+
+.artwork-detail-deleteBtn {
+  height: 48px !important;
+  border-radius: 12px !important;
+  font-weight: 800 !important;
+}
+
+@media (max-width: 768px) {
+  .artwork-detail-stats {
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .artwork-detail-backBtn {
+    transition: none !important;
+  }
+}
+

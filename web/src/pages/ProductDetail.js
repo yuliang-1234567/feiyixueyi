@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button, Breadcrumb, Image, InputNumber, message, Modal, Spin, Row, Col, Card, Tag } from 'antd';
-import { HomeOutlined, ShoppingCartOutlined, ZoomInOutlined, CloseOutlined, MinusOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Home, Minus, Plus, ShoppingCart, Trash2, X, ZoomIn } from "lucide-react";
 import api from '../utils/api';
 import { cartUtils } from '../utils/cart';
 import { useAuthStore } from '../store/authStore';
 import { getImageUrl } from '../utils/imageUtils';
 import './ProductDetail.css';
+import { LucideIcon } from "../components/icons/lucide";
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -19,15 +20,18 @@ const ProductDetail = () => {
   const [email, setEmail] = useState('');
   const [showDetailPreview, setShowDetailPreview] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [activeImageIdx, setActiveImageIdx] = useState(0);
+
+  const images = useMemo(() => {
+    const list = Array.isArray(product?.images) ? product.images : [];
+    return list.filter(Boolean);
+  }, [product]);
 
   useEffect(() => {
-    if (id) {
-      fetchProduct();
-      fetchRelatedProducts();
-    }
+    setActiveImageIdx(0);
   }, [id]);
 
-  const fetchProduct = async () => {
+  const fetchProduct = useCallback(async () => {
     setLoading(true);
     try {
       const response = await api.get(`/products/${id}`);
@@ -44,9 +48,9 @@ const ProductDetail = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, navigate]);
 
-  const fetchRelatedProducts = async () => {
+  const fetchRelatedProducts = useCallback(async () => {
     try {
       const response = await api.get('/products', {
         params: { limit: 8, status: 'published' }
@@ -59,7 +63,14 @@ const ProductDetail = () => {
     } catch (error) {
       console.error('获取相关商品失败:', error);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    if (id) {
+      fetchProduct();
+      fetchRelatedProducts();
+    }
+  }, [id, fetchProduct, fetchRelatedProducts]);
 
   const handleAddToCart = () => {
     if (!user) {
@@ -127,13 +138,18 @@ const ProductDetail = () => {
     return null;
   }
 
+  const activeImage = images[activeImageIdx] || product.images?.[0] || '';
+  const stock = Number(product.stock ?? 0);
+  const stockLevel =
+    stock <= 0 ? "out" : stock <= 10 ? "low" : "ok";
+
   return (
     <div className="product-detail-page">
       {/* 面包屑导航 */}
       <div className="product-breadcrumb">
         <Breadcrumb
           items={[
-            { title: <HomeOutlined />, href: '/' },
+            { title: <LucideIcon icon={Home} />, href: '/' },
             { title: '文创商城', href: '/shop' },
             { title: product.category || '其他', href: `/shop?category=${product.category}` },
             { title: product.name }
@@ -141,7 +157,7 @@ const ProductDetail = () => {
         />
         <Button
           type="text"
-          icon={<CloseOutlined />}
+          icon={<LucideIcon icon={X} />}
           onClick={() => navigate('/shop')}
           className="close-btn"
         />
@@ -155,18 +171,39 @@ const ProductDetail = () => {
             <div className="product-image-section">
               <div className="product-main-image-wrapper">
                 <img
-                  src={getImageUrl(product.images?.[0] || '')}
+                  src={getImageUrl(activeImage)}
                   alt={product.name}
                   className="product-main-image"
                 />
                 <Button
                   className="detail-preview-btn"
-                  icon={<ZoomInOutlined />}
+                  icon={<LucideIcon icon={ZoomIn} />}
                   onClick={() => setShowDetailPreview(true)}
                 >
                   细节预览
                 </Button>
               </div>
+              {images.length > 1 && (
+                <div className="product-thumbs" aria-label="商品图片缩略图">
+                  {images.slice(0, 6).map((img, idx) => (
+                    <button
+                      key={`${img}-${idx}`}
+                      type="button"
+                      className={
+                        idx === activeImageIdx
+                          ? "product-thumb product-thumb-active"
+                          : "product-thumb"
+                      }
+                      onClick={() => setActiveImageIdx(idx)}
+                    >
+                      <img
+                        src={getImageUrl(img)}
+                        alt={`${product.name} 缩略图 ${idx + 1}`}
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </Col>
 
@@ -219,8 +256,16 @@ const ProductDetail = () => {
                 </div>
                 <div className="spec-item">
                   <span className="spec-label">库存：</span>
-                  <span className="spec-value stock-warning">
-                    {product.stock > 0 ? `仅剩${product.stock}件` : '已售罄'}
+                  <span
+                    className={
+                      stockLevel === "out"
+                        ? "spec-value stock-warning stock-out"
+                        : stockLevel === "low"
+                        ? "spec-value stock-warning stock-low"
+                        : "spec-value stock-ok"
+                    }
+                  >
+                    {stock > 0 ? `库存 ${stock} 件` : "已售罄"}
                   </span>
                 </div>
               </div>
@@ -230,7 +275,7 @@ const ProductDetail = () => {
                 <span className="quantity-label">数量：</span>
                 <div className="quantity-controls">
                   <Button
-                    icon={<MinusOutlined />}
+                    icon={<LucideIcon icon={Minus} />}
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
                     disabled={quantity <= 1}
                   />
@@ -242,7 +287,7 @@ const ProductDetail = () => {
                     className="quantity-input"
                   />
                   <Button
-                    icon={<PlusOutlined />}
+                    icon={<LucideIcon icon={Plus} />}
                     onClick={() => setQuantity(Math.min(product.stock || 999, quantity + 1))}
                     disabled={quantity >= (product.stock || 999)}
                   />
@@ -263,7 +308,7 @@ const ProductDetail = () => {
                 </Button>
                 <Button
                   type="primary"
-                  icon={<ShoppingCartOutlined />}
+                  icon={<LucideIcon icon={ShoppingCart} />}
                   className="add-cart-btn"
                   onClick={handleAddToCart}
                   disabled={!product.stock || product.stock <= 0}
@@ -277,7 +322,7 @@ const ProductDetail = () => {
                   <Button
                     type="text"
                     danger
-                    icon={<DeleteOutlined />}
+                    icon={<LucideIcon icon={Trash2} />}
                     onClick={handleDelete}
                     loading={deleting}
                   >
@@ -359,12 +404,12 @@ const ProductDetail = () => {
           <div className="detail-preview-content" onClick={(e) => e.stopPropagation()}>
             <Button
               type="text"
-              icon={<CloseOutlined />}
+              icon={<LucideIcon icon={X} />}
               onClick={() => setShowDetailPreview(false)}
               className="preview-close-btn"
             />
             <Image
-              src={getImageUrl(product.images?.[0] || '')}
+              src={getImageUrl(activeImage)}
               alt={product.name}
               className="preview-image"
             />

@@ -1,7 +1,8 @@
 import React from 'react';
 import { Breadcrumb } from 'antd';
-import { HomeOutlined } from '@ant-design/icons';
+import { Home } from "lucide-react";
 import { useNavigate, useLocation } from 'react-router-dom';
+import { LucideIcon } from "./icons/lucide";
 
 /**
  * 面包屑导航组件
@@ -33,7 +34,7 @@ const BreadcrumbNav = ({ items = [] }) => {
       {
         title: (
           <span onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
-            <HomeOutlined /> 首页
+            <LucideIcon icon={Home} /> 首页
           </span>
         ),
       },

@@ -1,8 +1,9 @@
 import React from 'react';
 import { Layout, Row, Col } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { MailOutlined, PhoneOutlined, EnvironmentOutlined } from '@ant-design/icons';
+import { Mail, MapPin, Palette, Phone } from "lucide-react";
 import './Footer.css';
+import { LucideIcon } from "./icons/lucide";
 
 const { Footer: AntFooter } = Layout;
 
@@ -17,7 +18,9 @@ const Footer = () => {
           <Col xs={24} sm={12} md={6}>
             <div className="footer-brand">
               <div className="footer-logo">
-                <span className="logo-icon">🎨</span>
+                <span className="logo-icon" aria-hidden="true">
+                  <LucideIcon icon={Palette} size={28} strokeWidth={1.6} />
+                </span>
                 <span className="logo-text">非遗传承</span>
               </div>
               <p className="footer-description">
@@ -30,11 +33,11 @@ const Footer = () => {
           <Col xs={24} sm={12} md={6}>
             <h3 className="footer-title">核心模块</h3>
             <ul className="footer-links">
-              <li><a href="#" onClick={(e) => { e.preventDefault(); navigate('/heritage-learn'); }}>学习非遗</a></li>
-              <li><a href="#" onClick={(e) => { e.preventDefault(); navigate('/learn'); }}>AI学艺</a></li>
-              <li><a href="#" onClick={(e) => { e.preventDefault(); navigate('/transform'); }}>数字焕新</a></li>
-              <li><a href="#" onClick={(e) => { e.preventDefault(); navigate('/gallery'); }}>大师作品库</a></li>
-              <li><a href="#" onClick={(e) => { e.preventDefault(); navigate('/shop'); }}>文创商城</a></li>
+              <li><button type="button" className="footer-link-button" onClick={() => navigate('/heritage-learn')}>学习非遗</button></li>
+              <li><button type="button" className="footer-link-button" onClick={() => navigate('/learn')}>AI学艺</button></li>
+              <li><button type="button" className="footer-link-button" onClick={() => navigate('/transform')}>数字焕新</button></li>
+              <li><button type="button" className="footer-link-button" onClick={() => navigate('/gallery')}>大师作品库</button></li>
+              <li><button type="button" className="footer-link-button" onClick={() => navigate('/shop')}>文创商城</button></li>
             </ul>
           </Col>
 
@@ -42,10 +45,10 @@ const Footer = () => {
           <Col xs={24} sm={12} md={6}>
             <h3 className="footer-title">社区</h3>
             <ul className="footer-links">
-              <li><a href="#">匠人入驻</a></li>
-              <li><a href="#">教育合作</a></li>
-              <li><a href="#">志愿者招募</a></li>
-              <li><a href="#">活动中心</a></li>
+              <li><button type="button" className="footer-link-button footer-link-muted" aria-disabled="true">匠人入驻</button></li>
+              <li><button type="button" className="footer-link-button footer-link-muted" aria-disabled="true">教育合作</button></li>
+              <li><button type="button" className="footer-link-button footer-link-muted" aria-disabled="true">志愿者招募</button></li>
+              <li><button type="button" className="footer-link-button footer-link-muted" aria-disabled="true">活动中心</button></li>
             </ul>
           </Col>
 
@@ -54,15 +57,15 @@ const Footer = () => {
             <h3 className="footer-title">联系我们</h3>
             <ul className="footer-contact">
               <li>
-                <MailOutlined className="contact-icon" />
+                <LucideIcon icon={Mail} className="contact-icon" />
                 <span>13035397663@163.com</span>
               </li>
               <li>
-                <PhoneOutlined className="contact-icon" />
+                <LucideIcon icon={Phone} className="contact-icon" />
                 <span>13035397663</span>
               </li>
               <li>
-                <EnvironmentOutlined className="contact-icon" />
+                <LucideIcon icon={MapPin} className="contact-icon" />
                 <span>湖北省武汉市</span>
               </li>
             </ul>
@@ -75,11 +78,11 @@ const Footer = () => {
             © 2026 非遗传承. 保留所有权利。
           </div>
           <div className="footer-legal">
-            <a href="#">隐私政策</a>
+            <button type="button" className="footer-link-button footer-link-muted" aria-disabled="true">隐私政策</button>
             <span className="divider">|</span>
-            <a href="#">服务条款</a>
+            <button type="button" className="footer-link-button footer-link-muted" aria-disabled="true">服务条款</button>
             <span className="divider">|</span>
-            <a href="#">Cookie政策</a>
+            <button type="button" className="footer-link-button footer-link-muted" aria-disabled="true">Cookie政策</button>
           </div>
         </div>
       </div>

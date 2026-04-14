@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Card, Form, Input, Button, message, Checkbox, Typography, Alert } from 'antd';
-import { UserOutlined, LockOutlined } from '@ant-design/icons';
+import { Lock, Palette, User } from "lucide-react";
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
+import { LucideIcon } from "../components/icons/lucide";
 
 const Login = () => {
   const [form] = Form.useForm();
@@ -47,7 +48,7 @@ const Login = () => {
   // 如果已经登录，自动跳转（防止已登录用户访问登录页）
   useEffect(() => {
     if (user && isAuthenticated) {
-      console.log('✅ [Login Page] 用户已登录，自动跳转');
+      console.log('[Login Page] 用户已登录，自动跳转');
       navigate(fromPath, { replace: true });
     }
   }, [user, isAuthenticated, navigate, fromPath]);
@@ -75,9 +76,9 @@ const Login = () => {
       }
 
       // 执行登录
-      console.log('📝 [Login Page] 调用 login 函数...');
+      console.log('[Login Page] 调用 login 函数');
       const result = await login(email.trim(), password);
-      console.log('📝 [Login Page] 登录结果:', result);
+      console.log('[Login Page] 登录结果:', result);
 
       // 关闭加载提示
       if (hide) {
@@ -86,11 +87,11 @@ const Login = () => {
       }
 
       if (result && result.success) {
-        console.log('✅ [Login Page] 登录成功！');
+        console.log('[Login Page] 登录成功');
 
         // 验证用户状态（从store获取最新状态）
         const storeState = useAuthStore.getState();
-        console.log('✅ [Login Page] Store状态:', {
+        console.log('[Login Page] Store状态:', {
           user: storeState.user,
           isAuthenticated: storeState.isAuthenticated,
           hasToken: !!storeState.token,
@@ -106,31 +107,31 @@ const Login = () => {
         try {
           const userResult = await fetchCurrentUser();
           if (userResult.success) {
-            console.log('✅ [Login Page] 用户信息已更新:', userResult.user);
+            console.log('[Login Page] 用户信息已更新:', userResult.user);
           }
         } catch (err) {
-          console.warn('⚠️ [Login Page] 获取用户信息失败，但不影响登录:', err);
+          console.warn('[Login Page] 获取用户信息失败（不影响登录）:', err);
           // 即使获取用户信息失败，登录也已经成功，可以继续
         }
 
         // 稍微延迟跳转，确保消息能够显示，并且状态已更新
         setTimeout(() => {
           const finalState = useAuthStore.getState();
-          console.log('🚀 [Login Page] 准备跳转，最终状态:', {
+          console.log('[Login Page] 准备跳转，最终状态:', {
             user: finalState.user,
             isAuthenticated: finalState.isAuthenticated,
           });
-          console.log('🚀 [Login Page] 跳转到:', fromPath);
+          console.log('[Login Page] 跳转到:', fromPath);
           navigate(fromPath, { replace: true });
         }, 800);
       } else {
         // 显示错误消息
         const errorMsg = result?.message || '登录失败，请检查账号和密码';
-        console.error('❌ [Login Page] 登录失败:', errorMsg);
+        console.error('[Login Page] 登录失败:', errorMsg);
         message.error(errorMsg, 3);
       }
     } catch (error) {
-      console.error('❌ [Login Page] 登录异常:', error);
+      console.error('[Login Page] 登录异常:', error);
 
       // 关闭加载提示
       if (hide) {
@@ -176,7 +177,10 @@ const Login = () => {
             fontSize: '2.5rem',
             fontWeight: 700
           }}>
-            🎨 欢迎回来
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+              <LucideIcon icon={Palette} />
+              欢迎回来
+            </span>
           </Typography.Title>
           <Typography.Text type="secondary" style={{ fontSize: '15px', marginTop: '8px', display: 'block' }}>
             登录您的账号以继续
@@ -210,7 +214,7 @@ const Login = () => {
               { type: 'email', message: '请输入有效的邮箱地址!' },
             ]}
           >
-            <Input prefix={<UserOutlined />} placeholder="邮箱" />
+            <Input prefix={<LucideIcon icon={User} />} placeholder="邮箱" />
           </Form.Item>
 
           <Form.Item
@@ -220,7 +224,7 @@ const Login = () => {
               { min: 6, message: '密码至少需要 6 个字符' },
             ]}
           >
-            <Input.Password prefix={<LockOutlined />} placeholder="密码" />
+            <Input.Password prefix={<LucideIcon icon={Lock} />} placeholder="密码" />
           </Form.Item>
 
           <Form.Item name="remember" valuePropName="checked">

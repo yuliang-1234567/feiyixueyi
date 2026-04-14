@@ -1,7 +1,7 @@
 /* 学习非遗页面样式 */
 .heritage-learn-page {
   min-height: 100vh;
-  background: #fafafa;
+  background: var(--gradient-paper);
   font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
 }
 
@@ -22,8 +22,20 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #c8102e 0%, #8b0a1a 100%);
-  opacity: 0.95;
+  background:
+    radial-gradient(1000px 460px at 22% 40%, rgba(212, 175, 55, 0.18), transparent 62%),
+    radial-gradient(900px 420px at 80% 26%, rgba(200, 16, 46, 0.16), transparent 60%),
+    linear-gradient(135deg, rgba(254, 252, 248, 0.92) 0%, rgba(250, 249, 246, 0.92) 100%);
+  opacity: 1;
+}
+
+.heritage-hero-bg-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.03);
+  filter: saturate(1.04) contrast(1.04);
+  animation: homeHeroBreath 12s var(--ease-slow) infinite;
 }
 
 .heritage-hero-bg::after {
@@ -41,14 +53,15 @@
   position: relative;
   z-index: 1;
   text-align: center;
-  color: white;
+  color: var(--text-primary);
   padding: 0 24px;
 }
 
 .heritage-hero-badge {
   display: inline-block;
-  background: rgba(255, 255, 255, 0.25);
-  color: white;
+  background: rgba(200, 16, 46, 0.10);
+  color: rgba(200, 16, 46, 0.92);
+  border: 1px solid rgba(200, 16, 46, 0.18);
   padding: 6px 16px;
   border-radius: 20px;
   font-size: 14px;
@@ -60,13 +73,13 @@
   font-size: 42px;
   font-weight: 700;
   margin-bottom: 12px;
-  color: white;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  color: var(--text-primary);
+  text-shadow: 0 18px 44px rgba(44, 36, 22, 0.10);
 }
 
 .heritage-hero-subtitle {
   font-size: 18px;
-  color: rgba(255, 255, 255, 0.95);
+  color: var(--text-secondary);
   max-width: 480px;
   margin: 0 auto;
 }
@@ -85,7 +98,7 @@
 .section-title {
   font-size: 24px;
   font-weight: 700;
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 32px;
   display: flex;
   align-items: center;
@@ -93,19 +106,21 @@
 }
 
 .section-icon {
-  color: #c8102e;
+  color: var(--accent-color);
   font-size: 26px;
 }
 
 /* 非遗概述 */
 .heritage-overview {
-  background: white;
+  background: rgba(255, 255, 255, 0.70);
+  border-top: 1px solid rgba(139, 111, 71, 0.10);
+  border-bottom: 1px solid rgba(139, 111, 71, 0.10);
 }
 
 .overview-content p {
   font-size: 16px;
   line-height: 1.8;
-  color: #555;
+  color: var(--text-secondary);
   margin-bottom: 16px;
 }
 
@@ -115,7 +130,7 @@
 
 /* 非遗十大分类 */
 .heritage-categories {
-  background: #f5f5f5;
+  background: transparent;
 }
 
 .categories-grid {
@@ -127,12 +142,16 @@
 .category-card {
   text-align: center;
   border-radius: 12px;
-  transition: transform 0.3s, box-shadow 0.3s;
+  transition: transform var(--base) var(--ease-smooth), box-shadow var(--base) var(--ease-smooth), border-color var(--base) var(--ease-smooth);
+  border: 1px solid rgba(139, 111, 71, 0.14);
+  box-shadow: var(--shadow-sm);
+  background: rgba(255, 255, 255, 0.80);
 }
 
 .category-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(200, 16, 46, 0.15);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  border-color: rgba(200, 16, 46, 0.22);
 }
 
 .category-card .ant-card-body {
@@ -148,20 +167,20 @@
 .category-name {
   font-size: 16px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 8px;
 }
 
 .category-desc {
   font-size: 13px;
-  color: #666;
+  color: var(--text-secondary);
   line-height: 1.5;
   margin: 0;
 }
 
 /* 精选非遗项目 */
 .heritage-featured {
-  background: white;
+  background: transparent;
 }
 
 .featured-grid {
@@ -174,34 +193,38 @@
   border-radius: 12px;
   position: relative;
   overflow: hidden;
-  transition: transform 0.3s, box-shadow 0.3s;
+  transition: transform var(--base) var(--ease-smooth), box-shadow var(--base) var(--ease-smooth), border-color var(--base) var(--ease-smooth);
+  border: 1px solid rgba(139, 111, 71, 0.14);
+  box-shadow: var(--shadow-sm);
+  background: rgba(255, 255, 255, 0.82);
 }
 
 .featured-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  border-color: rgba(200, 16, 46, 0.22);
 }
 
 .featured-tag {
   display: inline-block;
-  background: #c8102e;
+  background: rgba(200, 16, 46, 0.92);
   color: white;
   font-size: 12px;
   padding: 4px 12px;
-  border-radius: 4px;
+  border-radius: 999px;
   margin-bottom: 12px;
 }
 
 .featured-name {
   font-size: 18px;
   font-weight: 700;
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 8px;
 }
 
 .featured-desc {
   font-size: 14px;
-  color: #666;
+  color: var(--text-secondary);
   line-height: 1.6;
   margin: 0;
 }
@@ -214,13 +237,13 @@
   display: block;
   margin-top: 12px;
   font-size: 13px;
-  color: #c8102e;
+  color: var(--accent-color);
   font-weight: 500;
 }
 
 /* 学习路径 */
 .heritage-path {
-  background: linear-gradient(180deg, #f5f5f5 0%, #fafafa 100%);
+  background: transparent;
 }
 
 .path-steps {
@@ -238,19 +261,19 @@
 }
 
 .path-step {
-  background: white;
+  background: rgba(255, 255, 255, 0.82);
   border-radius: 16px;
   padding: 32px 24px;
   min-width: 260px;
   max-width: 280px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
-  border: 1px solid #eee;
-  transition: all 0.3s;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid rgba(139, 111, 71, 0.14);
+  transition: transform var(--base) var(--ease-smooth), box-shadow var(--base) var(--ease-smooth), border-color var(--base) var(--ease-smooth);
 }
 
 .path-step:hover {
-  box-shadow: 0 8px 24px rgba(200, 16, 46, 0.12);
-  border-color: rgba(200, 16, 46, 0.3);
+  box-shadow: var(--shadow-lg);
+  border-color: rgba(200, 16, 46, 0.22);
 }
 
 .path-step-num {
@@ -259,7 +282,7 @@
   justify-content: center;
   width: 36px;
   height: 36px;
-  background: #c8102e;
+  background: rgba(200, 16, 46, 0.92);
   color: white;
   border-radius: 50%;
   font-size: 16px;
@@ -270,19 +293,19 @@
 .path-step-title {
   font-size: 18px;
   font-weight: 700;
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 8px;
 }
 
 .path-step-desc {
   font-size: 14px;
-  color: #666;
+  color: var(--text-secondary);
   line-height: 1.5;
   margin-bottom: 20px;
 }
 
 .path-step-btn {
-  background: #c8102e;
+  background: rgba(200, 16, 46, 0.92);
   border: none;
   border-radius: 8px;
 }
@@ -351,7 +374,7 @@
   gap: 16px;
   padding: 16px;
   margin-bottom: 12px;
-  border: 1px solid #eee;
+  border: 1px solid rgba(139, 111, 71, 0.14);
   border-radius: 12px;
   text-decoration: none;
   color: inherit;
@@ -359,7 +382,7 @@
 }
 
 .tutorial-item:hover {
-  border-color: #c8102e;
+  border-color: rgba(200, 16, 46, 0.22);
   background: rgba(200, 16, 46, 0.04);
 }
 
@@ -370,10 +393,59 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f5f5f5;
+  background: rgba(139, 111, 71, 0.08);
   border-radius: 10px;
   font-size: 20px;
-  color: #c8102e;
+  color: var(--accent-color);
+}
+
+.tutorial-item-rank {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  color: rgba(44, 36, 22, 0.78);
+  background: rgba(254, 252, 248, 0.95);
+  border: 1px solid rgba(139, 111, 71, 0.18);
+  margin-top: 6px;
+}
+
+.tutorial-recommend {
+  margin: 14px 0 18px;
+  padding: 14px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(139, 111, 71, 0.14);
+  box-shadow: var(--shadow-xs);
+}
+
+.tutorial-recommendTitle {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.tutorial-recommendSteps {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-secondary);
+  line-height: 1.8;
+  font-size: 13px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .category-card,
+  .featured-card,
+  .path-step,
+  .tutorial-item {
+    transition: none;
+  }
 }
 
 .tutorial-item-body {

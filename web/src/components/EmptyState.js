@@ -1,6 +1,5 @@
 import React from 'react';
 import { Empty } from 'antd';
-import { InboxOutlined } from '@ant-design/icons';
 
 /**
  * 空状态组件

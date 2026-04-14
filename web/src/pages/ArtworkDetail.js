@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Row, Col, Button, Tag, Statistic, Image, Avatar, Input, List, message, Empty, Popconfirm, Divider, Tabs } from 'antd';
-import { EyeOutlined, HeartOutlined, HeartFilled, CommentOutlined, DeleteOutlined, ArrowLeftOutlined, BarChartOutlined, UserOutlined } from '@ant-design/icons';
+import { BarChart3, ChevronLeft, Eye, Heart, MessageCircle, Trash2, User } from "lucide-react";
 import api from '../utils/api';
 import { useAuthStore } from '../store/authStore';
 import { getImageUrl } from '../utils/imageUtils';
 import { getMockArtworkById, isMockArtworkId } from '../data/galleryWorksMock';
+import { LucideIcon } from "../components/icons/lucide";
+import "./ArtworkDetail.css";
 // 使用原生日期格式化，避免引入 moment
 const formatDate = (dateString) => {
   if (!dateString) return '';
@@ -214,7 +216,7 @@ const ArtworkDetail = () => {
   };
 
   if (loading) {
-    return <div style={{ padding: '100px', textAlign: 'center' }}>加载中...</div>;
+    return <div className="artwork-detail-loading">加载中...</div>;
   }
 
   if (!artwork) {
@@ -222,48 +224,25 @@ const ArtworkDetail = () => {
   }
 
   const isOwner = token && user && (artwork.authorId === user.id || user.role === 'admin');
+  const canInteract = !!token && !isMockArtworkId(artwork?.id);
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      background: 'linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%)',
-      padding: '40px 24px',
-      maxWidth: '1400px',
-      margin: '0 auto'
-    }}>
+    <div className="artwork-detail-page">
       <Button 
-        icon={<ArrowLeftOutlined />} 
+        icon={<LucideIcon icon={ChevronLeft} />} 
         onClick={() => navigate(-1)}
-        style={{ 
-          marginBottom: '32px',
-          border: 'none',
-          background: 'rgba(255, 255, 255, 0.9)',
-          backdropFilter: 'blur(10px)',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
-          borderRadius: '10px',
-          height: '40px',
-          padding: '0 20px'
-        }}
+        className="artwork-detail-backBtn"
       >
         返回
       </Button>
 
       <Row gutter={[32, 32]}>
         <Col xs={24} lg={14}>
-          <Card style={{ 
-            borderRadius: '20px', 
-            boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-            border: '1px solid #e8e8e8',
-            overflow: 'hidden'
-          }}>
+          <Card className="artwork-detail-imageCard">
             <Image
               src={getImageUrl(artwork.imageUrl)}
               alt={artwork.title}
-              style={{ 
-                width: '100%', 
-                borderRadius: '16px',
-                background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)'
-              }}
+              className="artwork-detail-image"
               fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBuyhJLqOIMQ17Zx0rCzIyc1MwA0fkhcWFv6e//5d4GBg1IhF+DQf+v//7/3//3cxYGD4Jlv8/wcA0YFh4O12AgAAAFZlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAA5KGAAcAAAASAAAARKACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAABBU0NJSQAAAFNjcmVlbnNob3TlBmdZAAAB1mlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iWE1QIENvcmUgNi4wLjAiPgogICA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPgogICAgICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIgogICAgICAgICAgICB4bWxuczpleGlmPSJodHRwOi8vbnMuYWRvYmUuY29tL2V4aWYvMS4wLyI+CiAgICAgICAgIDxleGlmOlBpeGVsWURpbWVuc2lvbj4xOTU8L2V4aWY6UGl4ZWxZRGltZW5zaW9uPgogICAgICAgICA8ZXhpZjpQaXhlbFhEaW1lbnNpb24+MTk0PC9leGlmOlBpeGVsWERpbWVuc2lvbj4KICAgICAgICAgPGV4aWY6VXNlckNvbW1lbnQ+U2NyZWVuc2hvdDwvZXhpZjpVc2VyQ29tbWVudD4KICAgICAgPC9yZGY6RGVzY3JpcHRpb24+CiAgIDwvcmRmOlJERj4KPC94OnhtcG1ldGE+Chjd7gAAADtJREFUaEPt0DEBAAAAwqD1T20JT6AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPgAtd8AAYizw/EAAAAASUVORK5CYII="
               onError={(e) => {
                 console.error('图片加载失败:', artwork.imageUrl);
@@ -274,94 +253,46 @@ const ArtworkDetail = () => {
         </Col>
 
         <Col xs={24} lg={10}>
-          <Card style={{ 
-            borderRadius: '20px', 
-            boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-            border: '1px solid #e8e8e8',
-            marginBottom: '24px'
-          }}>
-            <h1 style={{ 
-              fontSize: '2rem', 
-              fontWeight: 700, 
-              marginBottom: '20px', 
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              lineHeight: '1.4'
-            }}>
-              {artwork.title}
-            </h1>
+          <Card className="artwork-detail-infoCard">
+            <h1 className="artwork-detail-title">{artwork.title}</h1>
 
-            <div style={{ marginBottom: '20px' }}>
-              <Tag color="blue" style={{ 
-                fontSize: '14px', 
-                padding: '6px 16px',
-                borderRadius: '8px',
-                border: 'none',
-                background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
-                color: '#667eea',
-                fontWeight: '500',
-                marginRight: '8px',
-                marginBottom: '8px'
-              }}>
+            <div className="artwork-detail-tags">
+              <Tag className="artwork-detail-tagPrimary">
                 {artwork.category}
               </Tag>
               {artwork.tags?.map((tag, index) => (
-                <Tag key={index} style={{ 
-                  fontSize: '14px', 
-                  padding: '6px 16px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  background: '#f5f5f5',
-                  color: '#666',
-                  fontWeight: '500',
-                  marginRight: '8px',
-                  marginBottom: '8px'
-                }}>
+                <Tag key={index} className="artwork-detail-tag">
                   {tag}
                 </Tag>
               ))}
             </div>
 
             {artwork.description && (
-              <p style={{ 
-                color: '#666', 
-                lineHeight: '1.8', 
-                marginBottom: '32px',
-                fontSize: '15px'
-              }}>
+              <p className="artwork-detail-desc">
                 {artwork.description}
               </p>
             )}
 
             <Divider style={{ margin: '24px 0' }} />
 
-            <div style={{ 
-              display: 'flex', 
-              gap: '32px', 
-              marginBottom: '32px',
-              padding: '20px',
-              background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)',
-              borderRadius: '16px'
-            }}>
+            <div className="artwork-detail-stats">
               <Statistic
                 title="浏览"
                 value={artwork.views || 0}
-                prefix={<EyeOutlined style={{ color: '#667eea' }} />}
-                valueStyle={{ fontSize: '24px', color: '#1a1a1a', fontWeight: '600' }}
+                prefix={<LucideIcon icon={Eye} className="artwork-detail-statIcon" />}
+                valueStyle={{ fontSize: '24px', color: '#1a1a1a', fontWeight: '700' }}
               />
               <Statistic
                 title="点赞"
                 value={likesCount}
-                prefix={<HeartOutlined style={{ color: '#ff6b6b' }} />}
-                valueStyle={{ fontSize: '24px', color: '#1a1a1a', fontWeight: '600' }}
+                prefix={<LucideIcon icon={Heart} className="artwork-detail-statIcon artwork-detail-statIconLike" />}
+                valueStyle={{ fontSize: '24px', color: '#1a1a1a', fontWeight: '700' }}
               />
               <Statistic
                 title="评论"
                 value={artwork.commentsCount || 0}
-                prefix={<CommentOutlined style={{ color: '#667eea' }} />}
-                valueStyle={{ fontSize: '24px', color: '#1a1a1a', fontWeight: '600' }}
+                prefix={<LucideIcon icon={MessageCircle} className="artwork-detail-statIcon" />}
+                valueStyle={{ fontSize: '24px', color: '#1a1a1a', fontWeight: '700' }}
               />
             </div>
 
@@ -369,7 +300,7 @@ const ArtworkDetail = () => {
               <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
                 <Avatar 
                   src={artwork.author?.avatar} 
-                  icon={<UserOutlined />}
+                  icon={<LucideIcon icon={User} />}
                   style={{ marginRight: '12px' }}
                 />
                 <div>
@@ -381,31 +312,25 @@ const ArtworkDetail = () => {
               </div>
             </div>
 
-            {/* 仅作者本人可操作：点赞、删除。他人作品与 mock 仅可查看，不可操作 */}
-            {isOwner && (
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <Button
-                  type={isLiked ? 'primary' : 'default'}
-                  icon={isLiked ? <HeartFilled /> : <HeartOutlined />}
-                  onClick={handleLike}
-                  size="large"
-                  block
-                  style={{
-                    height: '48px',
-                    borderRadius: '12px',
-                    fontWeight: '500',
-                    ...(isLiked ? {
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      border: 'none',
-                      boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
-                    } : {
-                      border: '2px solid #667eea',
-                      color: '#667eea'
-                    })
-                  }}
-                >
-                  {isLiked ? '已点赞' : '点赞'}
-                </Button>
+            <div className="artwork-detail-actions">
+              <Button
+                type={isLiked ? 'primary' : 'default'}
+                icon={
+                  isLiked ? (
+                    <LucideIcon icon={Heart} fill="currentColor" />
+                  ) : (
+                    <LucideIcon icon={Heart} />
+                  )
+                }
+                onClick={handleLike}
+                size="large"
+                disabled={!canInteract}
+                className={isLiked ? "artwork-detail-likeBtn artwork-detail-likeBtnOn" : "artwork-detail-likeBtn"}
+              >
+                {isLiked ? '已点赞' : '点赞'}
+              </Button>
+
+              {isOwner && (
                 <Popconfirm
                   title="确定要删除这个作品吗？"
                   onConfirm={handleDelete}
@@ -414,24 +339,20 @@ const ArtworkDetail = () => {
                 >
                   <Button 
                     danger 
-                    icon={<DeleteOutlined />} 
+                    icon={<LucideIcon icon={Trash2} />} 
                     size="large"
-                    style={{
-                      height: '48px',
-                      borderRadius: '12px',
-                      fontWeight: '500'
-                    }}
+                    className="artwork-detail-deleteBtn"
                   >
                     删除
                   </Button>
                 </Popconfirm>
-              </div>
-            )}
+              )}
+            </div>
           </Card>
 
           {isOwner && stats && (
             <Card 
-              title={<><BarChartOutlined /> 统计数据</>}
+              title={<><LucideIcon icon={BarChart3} /> 统计数据</>}
               style={{ 
                 borderRadius: '20px', 
                 boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
@@ -500,45 +421,23 @@ const ArtworkDetail = () => {
       </Row>
 
       <Card 
-        title={<><CommentOutlined /> 评论 ({artwork.commentsCount || 0})</>}
-        style={{ 
-          marginTop: '32px', 
-          borderRadius: '20px', 
-          boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-          border: '1px solid #e8e8e8'
-        }}
+        title={<><LucideIcon icon={MessageCircle} /> 评论 ({artwork.commentsCount || 0})</>}
+        className="artwork-detail-commentsCard"
       >
-        {/* 仅作者本人可发表评论；他人作品与 mock 仅可查看评论列表，不可操作 */}
-        {token && isOwner && (
-          <div style={{ 
-            marginBottom: '32px',
-            padding: '20px',
-            background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)',
-            borderRadius: '16px'
-          }}>
+        {/* 登录用户可评论；mock 作品只读 */}
+        {canInteract && (
+          <div className="artwork-detail-commentComposer">
             <TextArea
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
               placeholder="写下你的评论..."
               rows={4}
-              style={{ 
-                marginBottom: '16px',
-                borderRadius: '12px',
-                border: '1px solid #e8e8e8'
-              }}
+              className="artwork-detail-commentInput"
             />
             <Button 
               type="primary" 
               onClick={handleComment}
-              style={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                border: 'none',
-                borderRadius: '10px',
-                height: '40px',
-                padding: '0 24px',
-                fontWeight: '500',
-                boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
-              }}
+              className="artwork-detail-commentBtn"
             >
               发表评论
             </Button>
@@ -552,7 +451,7 @@ const ArtworkDetail = () => {
           renderItem={(comment) => (
             <List.Item>
               <List.Item.Meta
-                avatar={<Avatar src={comment.user?.avatar} icon={<UserOutlined />} />}
+                avatar={<Avatar src={comment.user?.avatar} icon={<LucideIcon icon={User} />} />}
                 title={
                   <div>
                     <span style={{ fontWeight: 500 }}>{comment.user?.nickname || comment.user?.username}</span>

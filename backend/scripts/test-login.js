@@ -26,7 +26,7 @@ async function testLogin() {
   try {
     console.log('\n2️⃣ 测试登录接口...');
     const loginResponse = await axios.post(`${API_URL}/auth/login`, {
-      email: 'admin@example.com',
+      email: 'chengbo@qq.com',
       password: 'admin123'
     });
 

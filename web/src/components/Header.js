@@ -1,9 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { Layout, Menu, Button, Avatar, Dropdown, Badge, Input } from 'antd';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { HomeOutlined, BulbOutlined, ExperimentOutlined, ShopOutlined, UserOutlined, ShoppingCartOutlined, SearchOutlined, ReadOutlined } from '@ant-design/icons';
+import {
+  BookOpenText,
+  Home,
+  Palette,
+  Search,
+  ShoppingCart,
+  Sparkles,
+  Store,
+  User,
+  Wand2,
+} from "lucide-react";
 import { useAuthStore } from '../store/authStore';
 import { cartUtils } from '../utils/cart';
+import { LucideIcon } from "./icons/lucide";
+import "./Header.css";
 
 const { Header: AntHeader } = Layout;
 
@@ -40,32 +52,32 @@ const Header = () => {
   const menuItems = [
     {
       key: '/',
-      icon: <HomeOutlined />,
+      icon: <LucideIcon icon={Home} />,
       label: '首页',
     },
     {
       key: '/heritage-learn',
-      icon: <ReadOutlined />,
+      icon: <LucideIcon icon={BookOpenText} />,
       label: '学习非遗',
     },
     {
       key: '/learn',
-      icon: <BulbOutlined />,
+      icon: <LucideIcon icon={Sparkles} />,
       label: 'AI学艺',
     },
     {
       key: '/transform',
-      icon: <ExperimentOutlined />,
+      icon: <LucideIcon icon={Wand2} />,
       label: '数字焕新',
     },
     {
       key: '/gallery',
-      icon: <HomeOutlined />,
+      icon: <LucideIcon icon={Home} />,
       label: '作品市',
     },
     {
       key: '/shop',
-      icon: <ShopOutlined />,
+      icon: <LucideIcon icon={Store} />,
       label: '文创商城',
     },
   ];
@@ -73,22 +85,22 @@ const Header = () => {
   const userMenuItems = [
     {
       key: 'artworks',
-      icon: <HomeOutlined />,
+      icon: <LucideIcon icon={Home} />,
       label: '我的作品',
     },
     {
       key: 'products',
-      icon: <ShopOutlined />,
+      icon: <LucideIcon icon={Store} />,
       label: '商品管理',
     },
     {
       key: 'orders',
-      icon: <ShopOutlined />,
+      icon: <LucideIcon icon={Store} />,
       label: '我的订单',
     },
     {
       key: 'profile',
-      icon: <UserOutlined />,
+      icon: <LucideIcon icon={User} />,
       label: '个人中心',
     },
     {
@@ -113,80 +125,30 @@ const Header = () => {
   };
 
   return (
-    <AntHeader className="immersive-header" style={{ 
-      display: 'flex', 
-      justifyContent: 'space-between', 
-      alignItems: 'center',
-      padding: '0 32px',
-      background: 'white',
-      backdropFilter: 'blur(12px)',
-      boxShadow: '0 2px 12px rgba(139, 111, 71, 0.12)',
-      borderBottom: '2px solid var(--border-brown)'
-    }}>
-      <div 
-        style={{ 
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          cursor: 'pointer',
-          transition: 'all 0.3s'
-        }}
-        onClick={() => navigate('/')}
-        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
-        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-      >
-        <div style={{
-          width: '40px',
-          height: '40px',
-          borderRadius: '8px',
-          background: '#c8102e',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '20px',
-          boxShadow: '0 2px 8px rgba(200, 16, 46, 0.3)'
-        }}>
-          🎨
-        </div>
-        <div style={{
-          fontSize: '20px',
-          fontWeight: '700',
-          color: '#c8102e',
-          letterSpacing: '0.5px'
-        }}>
-          非遗传承
-        </div>
-      </div>
+    <AntHeader className="immersive-header">
+      <button type="button" className="header-brand" onClick={() => navigate('/')}>
+        <span className="header-logoMark" aria-hidden="true">
+          <LucideIcon icon={Palette} size={20} strokeWidth={1.6} />
+        </span>
+        <span className="header-title">非遗传承</span>
+      </button>
       <Menu
         theme="light"
         mode="horizontal"
         selectedKeys={[location.pathname]}
         items={menuItems}
         onClick={({ key }) => navigate(key)}
-        style={{ 
-          flex: 1, 
-          justifyContent: 'center', 
-          minWidth: 0,
-          borderBottom: 'none',
-          background: 'transparent',
-          fontSize: '15px',
-          fontWeight: '500'
-        }}
+        className="header-menu"
       />
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f5f5f5', borderRadius: '8px', padding: '4px 12px' }}>
-          <SearchOutlined style={{ fontSize: '18px', color: '#999' }} />
+      <div className="header-actions">
+        <div className="header-search">
+          <LucideIcon icon={Search} className="header-search-icon" />
           <Input
             placeholder="搜索非遗项目、作品、商品..."
             value={searchKeyword}
             onChange={(e) => setSearchKeyword(e.target.value)}
             allowClear
-            style={{
-              border: 'none',
-              background: 'transparent',
-              width: '200px',
-              fontSize: '14px'
-            }}
+            className="header-searchInput"
             onPressEnter={(e) => {
               const keyword = (e.target.value || searchKeyword).trim();
               navigate(`/search?q=${encodeURIComponent(keyword)}`);
@@ -199,15 +161,7 @@ const Header = () => {
         </div>
         <Button
           type="primary"
-          style={{
-            background: '#c8102e',
-            border: 'none',
-            borderRadius: '8px',
-            height: '36px',
-            padding: '0 20px',
-            fontSize: '14px',
-            fontWeight: '600'
-          }}
+          className="header-searchBtn"
           onClick={() => {
             const keyword = searchKeyword.trim();
             navigate(`/search?q=${encodeURIComponent(keyword)}`);
@@ -215,30 +169,12 @@ const Header = () => {
         >
           搜索
         </Button>
-        <Badge count={cartCount} showZero={false} style={{
-          backgroundColor: '#c8102e'
-        }}>
+        <Badge count={cartCount} showZero={false} className="header-cartBadge">
           <Button
             type="text"
-            icon={<ShoppingCartOutlined style={{ fontSize: '20px', color: '#333' }} />}
+            icon={<LucideIcon icon={ShoppingCart} className="header-cart-icon" />}
             onClick={() => navigate('/cart')}
-            style={{
-              color: '#333',
-              fontSize: '20px',
-              padding: '0 12px',
-              height: '40px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: '8px',
-              transition: 'all 0.3s'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(0, 0, 0, 0.05)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-            }}
+            className="header-cartBtn"
           />
         </Badge>
         {user ? (
@@ -248,23 +184,8 @@ const Header = () => {
             overlayStyle={{ borderRadius: '12px' }}
           >
             <Avatar 
-              style={{ 
-                cursor: 'pointer',
-                border: '2px solid var(--primary-color)',
-                boxShadow: '0 2px 8px rgba(139, 111, 71, 0.25)',
-                transition: 'all 0.3s'
-              }} 
+              className="header-avatar"
               src={user.avatar}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'scale(1.1)';
-                e.currentTarget.style.boxShadow = '0 4px 16px rgba(139, 111, 71, 0.35)';
-                e.currentTarget.style.borderColor = 'var(--accent-color)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'scale(1)';
-                e.currentTarget.style.boxShadow = '0 2px 8px rgba(139, 111, 71, 0.25)';
-                e.currentTarget.style.borderColor = 'var(--primary-color)';
-              }}
             >
               {user.username?.[0]?.toUpperCase()}
             </Avatar>
@@ -274,45 +195,14 @@ const Header = () => {
             <Button 
               type="text" 
               onClick={() => navigate('/login')}
-              style={{ 
-                color: 'var(--primary-color)',
-                fontWeight: '600',
-                padding: '0 20px',
-                height: '40px',
-                borderRadius: '8px',
-                transition: 'all 0.3s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(139, 111, 71, 0.1)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
-              }}
+              className="header-loginBtn"
             >
               登录
             </Button>
             <Button 
               type="primary" 
               onClick={() => navigate('/register')}
-              style={{
-                background: 'var(--gradient-primary)',
-                border: 'none',
-                borderRadius: '8px',
-                height: '40px',
-                padding: '0 24px',
-                fontWeight: '600',
-                color: 'white',
-                boxShadow: 'var(--shadow-md)',
-                transition: 'all 0.3s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = '0 6px 16px rgba(139, 111, 71, 0.4)';
-                e.currentTarget.style.transform = 'translateY(-2px)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(139, 111, 71, 0.3)';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }}
+              className="header-registerBtn"
             >
               注册
             </Button>

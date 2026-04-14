@@ -1,18 +1,20 @@
-import React, { useState, useRef, useEffect } from "react";
-import { Button, message, Select, Upload, Input, Spin, Modal } from "antd";
+import React, { useEffect, useRef, useState } from "react";
+import { Button, message, Upload, Modal } from "antd";
 import {
-  UploadOutlined,
-  CameraOutlined,
-  CheckCircleOutlined,
-  RightOutlined,
-} from "@ant-design/icons";
+  CheckCircle2,
+  Music,
+  PenTool,
+  Scissors,
+  Shapes,
+  Sparkles,
+  Theater,
+  Upload as UploadIcon,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../utils/api";
 import { useAuthStore } from "../store/authStore";
 import "./Learn.css";
-
-const { Option } = Select;
-const { TextArea } = Input;
+import { LucideIcon } from "../components/icons/lucide";
 
 const Learn = () => {
   const navigate = useNavigate();
@@ -24,16 +26,27 @@ const Learn = () => {
   const [analysisResult, setAnalysisResult] = useState(null);
   const [aiAdvice, setAiAdvice] = useState(null);
   const [adviceModalVisible, setAdviceModalVisible] = useState(false);
-  const fileInputRef = useRef(null);
+  const [analysisProgress, setAnalysisProgress] = useState(0);
+  const [analysisHint, setAnalysisHint] = useState("正在准备分析…");
+  const progressTimerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (progressTimerRef.current) {
+        window.clearInterval(progressTimerRef.current);
+        progressTimerRef.current = null;
+      }
+    };
+  }, []);
 
   // 非遗技艺列表
   const skills = [
-    { id: "peking-opera", name: "京剧", icon: "🎭" },
-    { id: "paper-cutting", name: "剪纸", icon: "✂️" },
-    { id: "guqin", name: "古琴", icon: "🎵" },
-    { id: "embroidery", name: "刺绣", icon: "🧵" },
-    { id: "pottery", name: "陶艺", icon: "🏺" },
-    { id: "calligraphy", name: "书法", icon: "🖋️" },
+    { id: "peking-opera", name: "京剧", icon: Theater },
+    { id: "paper-cutting", name: "剪纸", icon: Scissors },
+    { id: "guqin", name: "古琴", icon: Music },
+    { id: "embroidery", name: "刺绣", icon: Sparkles },
+    { id: "pottery", name: "陶艺", icon: Shapes },
+    { id: "calligraphy", name: "书法", icon: PenTool },
   ];
 
   // 第一步：选择技艺
@@ -77,6 +90,32 @@ const Learn = () => {
 
     setAnalyzing(true);
     setAnalysisResult(null);
+    setAnalysisProgress(0);
+    setAnalysisHint("正在比对纹样细节…");
+
+    if (progressTimerRef.current) {
+      window.clearInterval(progressTimerRef.current);
+      progressTimerRef.current = null;
+    }
+
+    const hintStages = [
+      { at: 12, text: "正在比对纹样细节…" },
+      { at: 36, text: "正在评估线条节奏与结构…" },
+      { at: 62, text: "正在校准风格一致性…" },
+      { at: 82, text: "正在生成改进建议…" },
+    ];
+
+    progressTimerRef.current = window.setInterval(() => {
+      setAnalysisProgress((p) => {
+        const next = Math.min(
+          90,
+          p + Math.max(1, Math.round((90 - p) * 0.06))
+        );
+        const stage = [...hintStages].reverse().find((s) => next >= s.at);
+        if (stage) setAnalysisHint(stage.text);
+        return next;
+      });
+    }, 260);
 
     try {
       const formData = new FormData();
@@ -84,7 +123,7 @@ const Learn = () => {
       formData.append("skill", skillToUse.id);
       formData.append("skillName", skillToUse.name);
 
-      console.log("📤 [AI分析] 发送请求:", {
+      console.log("[AI分析] 发送请求:", {
         skill: skillToUse.id,
         skillName: skillToUse.name,
         fileName: fileToAnalyze.name,
@@ -101,6 +140,12 @@ const Learn = () => {
 
       if (response.data.success) {
         setAnalysisResult(response.data.data);
+        setAnalysisProgress(100);
+        setAnalysisHint("分析完成");
+        if (progressTimerRef.current) {
+          window.clearInterval(progressTimerRef.current);
+          progressTimerRef.current = null;
+        }
         setCurrentStep(4);
         // 自动获取AI建议
         handleGetAdvice(response.data.data);
@@ -108,7 +153,7 @@ const Learn = () => {
         message.error(response.data.message || "AI分析失败");
       }
     } catch (error) {
-      console.error("❌ [AI分析] 失败:", error);
+      console.error("[AI分析] 失败:", error);
       
       // 提供更详细的错误信息
       if (error.response) {
@@ -137,6 +182,10 @@ const Learn = () => {
       }
     } finally {
       setAnalyzing(false);
+      if (progressTimerRef.current) {
+        window.clearInterval(progressTimerRef.current);
+        progressTimerRef.current = null;
+      }
     }
   };
 
@@ -216,8 +265,15 @@ const Learn = () => {
                     key={skill.id}
                     className="skill-card"
                     onClick={() => handleSelectSkill(skill)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSelectSkill(skill);
+                    }}
                   >
-                    <div className="skill-icon">{skill.icon}</div>
+                    <div className="skill-icon" aria-hidden="true">
+                      <LucideIcon icon={skill.icon} size={22} strokeWidth={1.6} />
+                    </div>
                     <div className="skill-name">{skill.name}</div>
                   </div>
                 ))}
@@ -225,7 +281,7 @@ const Learn = () => {
             )}
             {currentStep > 1 && selectedSkill && (
               <div className="selected-skill">
-                <CheckCircleOutlined className="check-icon" />
+                <LucideIcon icon={CheckCircle2} className="check-icon" />
                 已选择：{selectedSkill.name}
               </div>
             )}
@@ -290,8 +346,18 @@ const Learn = () => {
                   showUploadList={false}
                   accept="image/*,video/*,audio/*"
                 >
-                  <div className="upload-zone">
-                    <UploadOutlined className="upload-icon" />
+                  <div
+                    className="upload-zone"
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        const btn = e.currentTarget.closest(".ant-upload");
+                        btn?.click();
+                      }
+                    }}
+                  >
+                    <LucideIcon icon={UploadIcon} className="upload-icon" />
                     <p>点击或拖拽文件至此上传作品</p>
                     <p className="upload-hint">支持 PNG, JPG, MP4, MP3 格式</p>
                   </div>
@@ -300,7 +366,7 @@ const Learn = () => {
             )}
             {currentStep > 2 && userWork && (
               <div className="uploaded-work">
-                <CheckCircleOutlined className="check-icon" />
+                <LucideIcon icon={CheckCircle2} className="check-icon" />
                 已上传：{userWork.name}
               </div>
             )}
@@ -334,9 +400,12 @@ const Learn = () => {
             </p>
             {currentStep === 3 && analyzing && (
               <div className="analysis-progress">
-                <div className="progress-text">分析中...</div>
+                <div className="progress-text">{analysisHint}</div>
                 <div className="progress-bar">
-                  <div className="progress-fill" style={{ width: "33%" }}></div>
+                  <div
+                    className="progress-fill"
+                    style={{ width: `${analysisProgress}%` }}
+                  ></div>
                 </div>
               </div>
             )}
@@ -417,7 +486,9 @@ const Learn = () => {
         {aiAdvice && (
           <div className="advice-modal-inner">
             <div className="advice-modal-header">
-              <span className="advice-modal-icon">✨</span>
+              <span className="advice-modal-icon" aria-hidden="true">
+                <LucideIcon icon={Sparkles} size={22} strokeWidth={1.6} />
+              </span>
               <h2 className="advice-modal-title">AI 学习建议</h2>
               <p className="advice-modal-subtitle">传习非遗，与 AI 共谱新章</p>
             </div>

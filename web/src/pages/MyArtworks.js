@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Row, Col, Button, Tag, Empty, message, Modal, Input, Select, Popconfirm, Pagination } from 'antd';
-import { EyeOutlined, HeartOutlined, CommentOutlined, EditOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import { Eye, Heart, MessageCircle, Pencil, Plus, Trash2 } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { useAuthStore } from '../store/authStore';
 import { getImageUrl } from '../utils/imageUtils';
+import { LucideIcon } from "../components/icons/lucide";
 
 const { Meta } = Card;
 const { TextArea } = Input;
@@ -172,7 +173,7 @@ const MyArtworks = () => {
         </div>
         <Button 
           type="primary" 
-          icon={<PlusOutlined />}
+          icon={<LucideIcon icon={Plus} />}
           onClick={() => navigate('/transform')}
           size="large"
           style={{
@@ -264,7 +265,7 @@ const MyArtworks = () => {
                     <Button 
                       key="view"
                       type="text" 
-                      icon={<EyeOutlined />} 
+                      icon={<LucideIcon icon={Eye} />}
                       onClick={() => handleViewDetail(artwork.id)}
                       style={{ color: '#667eea' }}
                     >
@@ -273,7 +274,7 @@ const MyArtworks = () => {
                     <Button 
                       key="edit"
                       type="text" 
-                      icon={<EditOutlined />} 
+                      icon={<LucideIcon icon={Pencil} />}
                       onClick={() => handleEdit(artwork)}
                       style={{ color: '#52c41a' }}
                     >
@@ -287,7 +288,7 @@ const MyArtworks = () => {
                       okText="确定"
                       cancelText="取消"
                     >
-                      <Button type="text" danger icon={<DeleteOutlined />}>
+                      <Button type="text" danger icon={<LucideIcon icon={Trash2} />}>
                         删除
                       </Button>
                     </Popconfirm>
@@ -316,9 +317,9 @@ const MyArtworks = () => {
                       <div style={{ marginTop: '8px' }}>
                         <Tag>{artwork.category}</Tag>
                         <div style={{ marginTop: '12px', display: 'flex', gap: '16px', color: '#8c8c8c', fontSize: '14px' }}>
-                          <span><EyeOutlined /> {artwork.views || 0}</span>
-                          <span><HeartOutlined /> {artwork.likesCount || 0}</span>
-                          <span><CommentOutlined /> {artwork.commentsCount || 0}</span>
+                          <span><LucideIcon icon={Eye} /> {artwork.views || 0}</span>
+                          <span><LucideIcon icon={Heart} /> {artwork.likesCount || 0}</span>
+                          <span><LucideIcon icon={MessageCircle} /> {artwork.commentsCount || 0}</span>
                         </div>
                       </div>
                     }

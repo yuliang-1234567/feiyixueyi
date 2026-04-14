@@ -2,16 +2,27 @@ import React, { useState } from "react";
 import { Button, Card, Modal } from "antd";
 import { useNavigate } from "react-router-dom";
 import {
-  RightOutlined,
-  ReadOutlined,
-  CrownOutlined,
-  FireOutlined,
-  EnvironmentOutlined,
-  PlayCircleOutlined,
-  FileTextOutlined,
-  LinkOutlined,
-} from "@ant-design/icons";
+  BookOpenText,
+  ChevronRight,
+  Crown,
+  FileText,
+  Flame,
+  Dumbbell,
+  Landmark,
+  Leaf,
+  Link as LinkIcon,
+  MapPin,
+  Music,
+  PenTool,
+  PersonStanding,
+  Play,
+  ScrollText,
+  Theater,
+  Wrench,
+  Palette,
+} from "lucide-react";
 import "./HeritageLearn.css";
+import { LucideIcon } from "../components/icons/lucide";
 
 // 教程资源数据结构：{ title, type: 'video'|'article', url, source, description }
 const TUTORIAL_RESOURCES = {
@@ -203,16 +214,36 @@ const TUTORIAL_RESOURCES = {
 
 // 非遗十大分类
 const HERITAGE_CATEGORIES = [
-  { id: "craft", name: "传统技艺", icon: "🔧", desc: "手工制作、织造、雕刻等技艺" },
-  { id: "drama", name: "传统戏剧", icon: "🎭", desc: "京剧、昆曲、地方戏等" },
-  { id: "music", name: "传统音乐", icon: "🎵", desc: "古琴、民间音乐、器乐" },
-  { id: "dance", name: "传统舞蹈", icon: "💃", desc: "民族舞、民间舞" },
-  { id: "folklore", name: "民俗", icon: "🏮", desc: "节庆习俗、民间信仰" },
-  { id: "medicine", name: "传统医药", icon: "🌿", desc: "中医、中药、针灸" },
-  { id: "acrobatics", name: "杂技与竞技", icon: "🤸", desc: "武术、杂技" },
-  { id: "oral", name: "口头传统", icon: "📜", desc: "传说、说唱、史诗" },
-  { id: "art", name: "传统美术", icon: "🎨", desc: "剪纸、刺绣、年画" },
-  { id: "calligraphy", name: "书法与篆刻", icon: "🖋️", desc: "书法、篆刻艺术" },
+  {
+    id: "craft",
+    name: "传统技艺",
+    icon: Wrench,
+    desc: "手工制作、织造、雕刻等技艺",
+  },
+  {
+    id: "drama",
+    name: "传统戏剧",
+    icon: Theater,
+    desc: "京剧、昆曲、地方戏等",
+  },
+  { id: "music", name: "传统音乐", icon: Music, desc: "古琴、民间音乐、器乐" },
+  {
+    id: "dance",
+    name: "传统舞蹈",
+    icon: PersonStanding,
+    desc: "民族舞、民间舞",
+  },
+  { id: "folklore", name: "民俗", icon: Landmark, desc: "节庆习俗、民间信仰" },
+  { id: "medicine", name: "传统医药", icon: Leaf, desc: "中医、中药、针灸" },
+  { id: "acrobatics", name: "杂技与竞技", icon: Dumbbell, desc: "武术、杂技" },
+  { id: "oral", name: "口头传统", icon: ScrollText, desc: "传说、说唱、史诗" },
+  { id: "art", name: "传统美术", icon: Palette, desc: "剪纸、刺绣、年画" },
+  {
+    id: "calligraphy",
+    name: "书法与篆刻",
+    icon: PenTool,
+    desc: "书法、篆刻艺术",
+  },
 ];
 
 // 精选非遗项目
@@ -221,7 +252,8 @@ const FEATURED_ITEMS = [
     id: 1,
     name: "苏绣",
     category: "传统技艺",
-    description: "中国四大名绣之一，以针法精细、色彩雅致著称，已有两千余年历史。",
+    description:
+      "中国四大名绣之一，以针法精细、色彩雅致著称，已有两千余年历史。",
   },
   {
     id: 2,
@@ -257,7 +289,8 @@ const FEATURED_ITEMS = [
     id: 7,
     name: "皮影戏",
     category: "传统戏剧",
-    description: "以兽皮或纸板做成的人物剪影表演故事，是中国民间广为流传的傀儡戏。",
+    description:
+      "以兽皮或纸板做成的人物剪影表演故事，是中国民间广为流传的傀儡戏。",
   },
   {
     id: 8,
@@ -269,9 +302,19 @@ const FEATURED_ITEMS = [
 
 // 学习路径步骤
 const LEARNING_PATH = [
-  { step: 1, title: "学习非遗", desc: "了解非遗知识与分类", path: "/heritage-learn" },
+  {
+    step: 1,
+    title: "学习非遗",
+    desc: "了解非遗知识与分类",
+    path: "/heritage-learn",
+  },
   { step: 2, title: "AI学艺", desc: "上传作品获取智能点评", path: "/learn" },
-  { step: 3, title: "数字焕新", desc: "将纹样应用到现代产品", path: "/transform" },
+  {
+    step: 3,
+    title: "数字焕新",
+    desc: "将纹样应用到现代产品",
+    path: "/transform",
+  },
 ];
 
 const HeritageLearn = () => {
@@ -284,13 +327,28 @@ const HeritageLearn = () => {
     setTutorialModalVisible(true);
   };
 
-  const tutorials = selectedItem ? (TUTORIAL_RESOURCES[selectedItem.name] || []) : [];
+  const tutorials = selectedItem
+    ? TUTORIAL_RESOURCES[selectedItem.name] || []
+    : [];
+  const orderedTutorials = tutorials.slice();
+  // 推荐顺序：优先视频入门，再文章补全（简单规则，避免空洞“列表”）
+  orderedTutorials.sort((a, b) => {
+    const aw = a.type === "video" ? 0 : 1;
+    const bw = b.type === "video" ? 0 : 1;
+    return aw - bw;
+  });
 
   return (
     <div className="heritage-learn-page">
       {/* Hero */}
       <section className="heritage-hero">
-        <div className="heritage-hero-bg" />
+        <div className="heritage-hero-bg">
+          <img
+            src="/images/heritageLearn/heritage-learn-bg.png"
+            alt="非遗传承"
+            className="heritage-hero-bg-image"
+          />
+        </div>
         <div className="heritage-hero-content">
           <span className="heritage-hero-badge">非遗入门</span>
           <h1 className="heritage-hero-title">学习非遗</h1>
@@ -304,7 +362,7 @@ const HeritageLearn = () => {
       <section className="heritage-overview section-block">
         <div className="section-container">
           <h2 className="section-title">
-            <ReadOutlined className="section-icon" />
+            <LucideIcon icon={BookOpenText} className="section-icon" />
             什么是非物质文化遗产
           </h2>
           <div className="overview-content">
@@ -322,13 +380,15 @@ const HeritageLearn = () => {
       <section className="heritage-categories section-block">
         <div className="section-container">
           <h2 className="section-title">
-            <CrownOutlined className="section-icon" />
+            <LucideIcon icon={Crown} className="section-icon" />
             非遗十大分类
           </h2>
           <div className="categories-grid">
             {HERITAGE_CATEGORIES.map((cat) => (
               <Card key={cat.id} className="category-card" hoverable>
-                <span className="category-icon">{cat.icon}</span>
+                <span className="category-icon" aria-hidden="true">
+                  <LucideIcon icon={cat.icon} size={22} strokeWidth={1.6} />
+                </span>
                 <h3 className="category-name">{cat.name}</h3>
                 <p className="category-desc">{cat.desc}</p>
               </Card>
@@ -341,7 +401,7 @@ const HeritageLearn = () => {
       <section className="heritage-featured section-block">
         <div className="section-container">
           <h2 className="section-title">
-            <FireOutlined className="section-icon" />
+            <LucideIcon icon={Flame} className="section-icon" />
             精选非遗项目
           </h2>
           <div className="featured-grid">
@@ -366,7 +426,7 @@ const HeritageLearn = () => {
       <section className="heritage-path section-block">
         <div className="section-container">
           <h2 className="section-title">
-            <EnvironmentOutlined className="section-icon" />
+            <LucideIcon icon={MapPin} className="section-icon" />
             推荐学习路径
           </h2>
           <div className="path-steps">
@@ -381,7 +441,7 @@ const HeritageLearn = () => {
                     className="path-step-btn"
                     onClick={() => navigate(item.path)}
                   >
-                    进入 <RightOutlined />
+                    进入 <LucideIcon icon={ChevronRight} />
                   </Button>
                 </div>
                 {index < LEARNING_PATH.length - 1 && (
@@ -398,7 +458,7 @@ const HeritageLearn = () => {
         title={
           selectedItem ? (
             <span>
-              <PlayCircleOutlined /> {selectedItem.name} 学习教程
+              <LucideIcon icon={Play} /> {selectedItem.name} 学习教程
             </span>
           ) : (
             ""
@@ -410,6 +470,31 @@ const HeritageLearn = () => {
           <Button key="close" onClick={() => setTutorialModalVisible(false)}>
             关闭
           </Button>,
+          selectedItem ? (
+            <Button
+              key="practice"
+              type="primary"
+              onClick={() => {
+                setTutorialModalVisible(false);
+                navigate(
+                  `/learn?skillName=${encodeURIComponent(selectedItem.name)}`
+                );
+              }}
+            >
+              去 AI 学艺上传练习
+            </Button>
+          ) : null,
+          selectedItem ? (
+            <Button
+              key="search"
+              onClick={() => {
+                setTutorialModalVisible(false);
+                navigate(`/search?q=${encodeURIComponent(selectedItem.name)}`);
+              }}
+            >
+              在地图/搜索中查看相关
+            </Button>
+          ) : null,
         ]}
         width={720}
         className="heritage-tutorial-modal"
@@ -422,9 +507,17 @@ const HeritageLearn = () => {
                 以下教程资源来自互联网，仅供学习参考。点击链接跳转至原作者/机构页面。
               </p>
             </div>
+            <div className="tutorial-recommend">
+              <div className="tutorial-recommendTitle">推荐顺序</div>
+              <ol className="tutorial-recommendSteps">
+                <li>先看：入门视频，建立手感与节奏</li>
+                <li>再练：跟练一遍，拍照/录制保存</li>
+                <li>后拓展：阅读文章与纪录片，补全体系</li>
+              </ol>
+            </div>
             <div className="tutorial-list">
-              {tutorials.length > 0 ? (
-                tutorials.map((t, idx) => (
+              {orderedTutorials.length > 0 ? (
+                orderedTutorials.map((t, idx) => (
                   <a
                     key={idx}
                     href={t.url}
@@ -432,21 +525,27 @@ const HeritageLearn = () => {
                     rel="noopener noreferrer"
                     className="tutorial-item"
                   >
+                    <span className="tutorial-item-rank" aria-hidden="true">
+                      {idx + 1}
+                    </span>
                     <span className="tutorial-item-icon">
                       {t.type === "video" ? (
-                        <PlayCircleOutlined />
+                        <LucideIcon icon={Play} />
                       ) : (
-                        <FileTextOutlined />
+                        <LucideIcon icon={FileText} />
                       )}
                     </span>
                     <div className="tutorial-item-body">
                       <div className="tutorial-item-title">{t.title}</div>
                       <div className="tutorial-item-source">
-                        <LinkOutlined /> 引用来源：{t.source}
+                        <LucideIcon icon={LinkIcon} /> 引用来源：{t.source}
                       </div>
                       <div className="tutorial-item-desc">{t.description}</div>
                     </div>
-                    <RightOutlined className="tutorial-item-arrow" />
+                    <LucideIcon
+                      icon={ChevronRight}
+                      className="tutorial-item-arrow"
+                    />
                   </a>
                 ))
               ) : (
