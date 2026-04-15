@@ -38,16 +38,16 @@ Page({
           artwork.imageUrl = getSafeImageUrl(artwork.imageUrl);
         }
 
-        if (shouldHideFromMiniProgram(artwork)) {
-          wx.showToast({
-            title: '该作品暂不在小程序展示',
-            icon: 'none'
-          });
-          setTimeout(() => {
-            wx.navigateBack();
-          }, 500);
-          return;
-        }
+        // if (shouldHideFromMiniProgram(artwork)) {
+        //   wx.showToast({
+        //     title: '该作品暂不在小程序展示',
+        //     icon: 'none'
+        //   });
+        //   setTimeout(() => {
+        //     wx.navigateBack();
+        //   }, 500);
+        //   return;
+        // }
 
         this.setData({
           artwork,
