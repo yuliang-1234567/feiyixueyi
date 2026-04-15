@@ -1,7 +1,7 @@
 .container {
   min-height: 100vh;
-  background: #f5f7fb;
-  padding: 24rpx;
+  background: transparent;
+  padding: 28rpx;
 }
 
 .header {
@@ -14,17 +14,17 @@
 .title {
   font-size: 38rpx;
   font-weight: 700;
-  color: #222;
+  color: var(--fy-text);
 }
 
 .clear-btn {
   height: 60rpx;
   line-height: 60rpx;
   border-radius: 999rpx;
-  border: none;
+  border: 2rpx solid rgba(200, 16, 46, 0.14);
   padding: 0 24rpx;
-  background: #ffe8ec;
-  color: #cc3050;
+  background: rgba(200, 16, 46, 0.08);
+  color: var(--fy-accent);
   font-size: 24rpx;
 }
 
@@ -37,10 +37,11 @@
 .record-item {
   display: flex;
   gap: 16rpx;
-  background: #fff;
+  background: var(--fy-card-solid);
+  border: 2rpx solid var(--fy-border);
   border-radius: 18rpx;
   padding: 16rpx;
-  box-shadow: 0 8rpx 20rpx rgba(0, 0, 0, 0.06);
+  box-shadow: var(--fy-shadow-sm);
 }
 
 .record-image {
@@ -61,17 +62,17 @@
 .record-skill {
   font-size: 30rpx;
   font-weight: 600;
-  color: #202124;
+  color: var(--fy-text);
 }
 
 .record-score {
   font-size: 26rpx;
-  color: #4f68cd;
+  color: var(--fy-accent);
 }
 
 .record-time {
   font-size: 22rpx;
-  color: #9197a3;
+  color: var(--fy-text-muted);
 }
 
 .empty {
@@ -83,12 +84,12 @@
   display: block;
   font-size: 34rpx;
   font-weight: 700;
-  color: #333;
+  color: var(--fy-text);
 }
 
 .empty-desc {
   display: block;
   margin-top: 12rpx;
   font-size: 24rpx;
-  color: #9ca1ab;
+  color: var(--fy-text-muted);
 }

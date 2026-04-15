@@ -1,108 +1,91 @@
 <!--pages/index/index.wxml-->
 <view class="container">
-  <!-- 轮播图区域（从web端移植） -->
-  <view class="carousel-section">
-    <!-- 顶部元数据 -->
-    <view class="carousel-metadata">
-      <text class="carousel-main-title">二十四节气·国画</text>
-      <view class="carousel-meta-info">
-        <view class="meta-item">
-          <text class="meta-label">来源:</text>
-          <text class="meta-value">中国非物质文化遗产保护中心</text>
-        </view>
-        <view class="meta-item">
-          <text class="meta-label">作者:</text>
-          <text class="meta-value">丁鼎</text>
-        </view>
-        <view class="meta-item">
-          <text class="meta-label">创建时间:</text>
-          <text class="meta-value">2025.03.26</text>
-        </view>
-      </view>
-    </view>
-
-    <!-- 主图片展示区 -->
-    <view class="carousel-main-display">
-      <view class="carousel-image-wrapper">
-        <image 
-          src="{{images[currentIndex].src}}" 
-          alt="{{images[currentIndex].fullTitle}}" 
-          class="carousel-main-image"
-          mode="aspectFit"
-        />
-        
-        <!-- 导航箭头 -->
-        <view class="carousel-nav-button carousel-nav-prev" bindtap="goToPrevious">
-          <text class="nav-arrow-text">‹</text>
-        </view>
-        <view class="carousel-nav-button carousel-nav-next" bindtap="goToNext">
-          <text class="nav-arrow-text">›</text>
-        </view>
-
-        <!-- 图片标题 -->
-        <view class="carousel-image-title">{{currentImage.fullTitle}}</view>
-
-        <!-- 页码指示 -->
-        <view class="carousel-page-indicator">{{currentIndex + 1}}/{{totalImages}}</view>
-      </view>
-    </view>
-
-    <!-- 缩略图导航区 -->
-    <view class="carousel-thumbnails">
-      <scroll-view class="carousel-thumbnails-scroll" scroll-x="true" scroll-left="{{thumbnailScrollLeft}}" scroll-with-animation="true">
-        <view class="carousel-thumbnails-container">
-          <view 
-            wx:for="{{visibleThumbnails}}" 
-            wx:key="index"
-            class="carousel-thumbnail {{item.index === currentIndex ? 'active' : ''}}"
-            bindtap="goToImage"
-            data-index="{{item.index}}"
-          >
-            <image 
-              src="{{item.src}}" 
-              alt="{{item.fullTitle}}" 
-              class="carousel-thumbnail-image"
-              mode="aspectFill"
-              data-index="{{item.index}}"
-            />
-            <view wx:if="{{item.index === currentIndex}}" class="carousel-thumbnail-border"></view>
-          </view>
-        </view>
-      </scroll-view>
-    </view>
-  </view>
-
-  <!-- 分类导航 -->
-  <view class="category-section">
-    <view class="section-header">
-      <text class="section-title">非遗类别</text>
-      <text class="section-more" bindtap="navigateToGallery">更多 ></text>
-    </view>
-    <view class="category-list">
-      <view class="category-item" wx:for="{{categories}}" wx:key="id"
-            data-category="{{item.id}}" bindtap="navigateToCategory">
-        <view class="category-icon-wrapper">
-          <text class="category-icon">{{item.icon}}</text>
-        </view>
-        <text class="category-name">{{item.name}}</text>
+  <!-- Hero -->
+  <view class="hero">
+    <image class="hero-bg" src="{{hero.bgUrl}}" mode="aspectFill" />
+    <view class="hero-overlay"></view>
+    <view class="hero-content">
+      <view class="hero-badge">{{hero.badge}}</view>
+      <view class="hero-title">{{hero.title}}</view>
+      <view class="hero-subtitle">{{hero.subtitle}}</view>
+      <view class="hero-actions">
+        <button class="hero-btn-primary" type="primary" bindtap="handleHeroPrimary">开始学习</button>
+        <button class="hero-btn-secondary" bindtap="handleHeroSecondary">查看作品</button>
       </view>
     </view>
   </view>
 
-  <!-- 功能入口 -->
+  <!-- 核心模块 -->
   <view class="feature-section">
     <view class="section-header">
-      <text class="section-title">特色功能</text>
+      <text class="section-title">核心模块</text>
     </view>
-    <view class="feature-grid">
-      <view class="feature-item" wx:for="{{features}}" wx:key="id"
-            data-url="{{item.url}}" bindtap="navigateToFeature">
-        <view class="feature-icon-wrapper">
-          <text class="feature-icon">{{item.icon}}</text>
+    <view class="modules-grid">
+      <view
+        class="module-card"
+        wx:for="{{modules}}"
+        wx:key="id"
+        data-url="{{item.url}}"
+        data-nav="{{item.nav}}"
+        bindtap="navigateToFeature"
+      >
+        <image class="module-image" src="{{item.imageUrl}}" mode="aspectFill" />
+        <view class="module-info">
+          <view class="module-title">{{item.title}}</view>
+          <view class="module-desc">{{item.desc}}</view>
         </view>
-        <text class="feature-name">{{item.name}}</text>
       </view>
     </view>
+  </view>
+
+  <!-- 继续学习 -->
+  <view class="recents-section">
+    <view class="section-header">
+      <text class="section-title">继续学习</text>
+      <text class="section-more" bindtap="goToAiLearn">去学艺 ></text>
+    </view>
+
+    <view wx:if="{{recents.length === 0}}" class="recents-empty card">
+      <view class="recents-emptyTitle">还没有学习记录</view>
+      <view class="recents-emptyText">从 AI 学艺开始，首页会自动记录你的进度。</view>
+      <button type="primary" class="recents-emptyBtn" bindtap="goToAiLearn">开始学艺</button>
+    </view>
+
+    <view wx:else class="recents-list">
+      <view class="recent-item card" wx:for="{{recents}}" wx:key="id" bindtap="goToAiLearn">
+        <view class="recent-left">
+          <view class="recent-title">{{item.skillName}}</view>
+          <view class="recent-meta">相似度 {{item.score}}%</view>
+        </view>
+        <view class="recent-right">继续</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 大师风采（复用精选作品） -->
+  <view class="masters-section" wx:if="{{masters.length > 0}}">
+    <view class="section-header">
+      <text class="section-title">大师风采</text>
+      <text class="section-more" bindtap="navigateToGallery">更多 ></text>
+    </view>
+    <scroll-view class="masters-scroll" scroll-x="true">
+      <view class="masters-list">
+        <view class="master-card" wx:for="{{masters}}" wx:key="id" data-id="{{item.id}}" bindtap="navigateToArtwork">
+          <image class="master-image" src="{{item.imageUrl}}" mode="aspectFill" lazy-load="true" />
+          <view class="master-info">
+            <view class="master-title">{{item.title}}</view>
+            <view class="master-tag">{{item.category}}</view>
+          </view>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 地域探索入口 -->
+  <view class="map-entry card" bindtap="navigateToFeature" data-url="/pages/learn/learn" data-nav="tab">
+    <view class="map-entryTitle">地域探索</view>
+    <view class="map-entryDesc">从一省一艺出发，找到你的文化坐标</view>
+    <view class="map-entryCta">开启 ></view>
   </view>
 
   <!-- 推荐作品 -->
@@ -113,15 +96,14 @@
     </view>
     <scroll-view class="artwork-scroll" scroll-x="true">
       <view class="artwork-list">
-        <view class="artwork-item" wx:for="{{featuredArtworks}}" wx:key="id"
-              data-id="{{item.id}}" bindtap="navigateToArtwork">
+        <view class="artwork-item" wx:for="{{featuredArtworks}}" wx:key="id" data-id="{{item.id}}" bindtap="navigateToArtwork">
           <image src="{{item.imageUrl}}" mode="aspectFill" class="artwork-image" lazy-load="true"></image>
           <view class="artwork-info">
             <text class="artwork-title">{{item.title}}</text>
             <view class="artwork-meta">
               <text class="artwork-category">{{item.category}}</text>
               <text class="artwork-stats">
-                <text>❤️</text>
+                <text class="artwork-likeDot"></text>
                 {{item.likesCount || 0}}
               </text>
             </view>
@@ -130,6 +112,5 @@
       </view>
     </scroll-view>
   </view>
-
 </view>
 

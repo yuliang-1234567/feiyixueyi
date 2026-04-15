@@ -409,25 +409,6 @@ const Learn = () => {
                 </div>
               </div>
             )}
-            {analysisResult && (
-              <div className="analysis-result">
-                <div className="result-score">
-                  相似度评分：
-                  <span className="score-value">
-                    {Math.round(analysisResult.similarity ?? analysisResult.accuracy ?? 0)}%
-                  </span>
-                </div>
-                {analysisResult.details && (
-                  <div className="result-details">
-                    {analysisResult.details.map((detail, index) => (
-                      <div key={index} className="detail-item">
-                        {detail}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         </div>
 

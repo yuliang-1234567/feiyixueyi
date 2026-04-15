@@ -1,6 +1,8 @@
 // pages/gallery/gallery.js
-const mockData = require('../../utils/galleryWorksMock');
-const FAVORITE_KEY = 'favorite_artwork_ids_v1';
+const api = require('../../utils/api');
+const { STORAGE_KEYS } = require('../../utils/constants');
+const { shouldHideFromMiniProgram } = require('../../utils/filters');
+const FAVORITE_KEY = STORAGE_KEYS.FAVORITE_ARTWORK_IDS;
 
 function getFavoriteIds() {
   const value = wx.getStorageSync(FAVORITE_KEY);
@@ -19,7 +21,7 @@ Page({
       { id: '其他', name: '其他' }
     ],
     page: 1,
-    limit: 20,
+    limit: 12,
     loading: false,
     hasMore: true
   },
@@ -64,26 +66,42 @@ Page({
     this.setData({ loading: true });
 
     try {
-      const artworksList = this.data.category
-        ? mockData.filter(item => item.category === this.data.category)
-        : mockData;
-
-      const start = (this.data.page - 1) * this.data.limit;
-      const end = start + this.data.limit;
-      const pagedList = artworksList.slice(start, end);
       const favoriteIds = getFavoriteIds();
-      const getSafeImageUrl = require('../../utils/getSafeImageUrl');
-      const newArtworks = pagedList.map(item => ({
-        ...item,
-        imageUrl: getSafeImageUrl(item.imageUrl),
-        isFavorited: favoriteIds.includes(item.id)
-      }));
-      
-      // 如果是第一页，则替换作品列表；否则追加
-      const updatedArtworks = this.data.page === 1 ? newArtworks : [...this.data.artworks, ...newArtworks];
-      
-      const hasMore = end < artworksList.length;
-      
+
+      const res = await api.get('/artworks', {
+        page: this.data.page,
+        limit: this.data.limit,
+        status: 'published',
+        ...(this.data.category ? { category: this.data.category } : {})
+      });
+
+      // 与 Web 端保持一致：success + data.artworks + data.pagination
+      const ok = res?.success === true;
+      // 兼容后端返回：{ success, data: { artworks, pagination } } 或 { success, data: { data: { artworks } } }
+      const rawArtworks =
+        (ok ? (res?.data?.artworks ?? res?.data?.data?.artworks) : res?.artworks) || [];
+      const pagination =
+        (ok ? (res?.data?.pagination ?? res?.data?.data?.pagination) : res?.pagination) || null;
+
+      // 先把接口返回的数据全部展示出来：不做 mock、不做标签过滤
+      const newArtworks = (Array.isArray(rawArtworks) ? rawArtworks : [])
+        .map(item => {
+          const normalizedId = item?.id ?? item?._id ?? item?.artworkId ?? '';
+          const imageUrl = api.getImageUrl(item?.imageUrl || item?.coverUrl || item?.cover || '');
+          return {
+            ...item,
+            id: normalizedId,
+            imageUrl,
+            isFavorited: favoriteIds.includes(normalizedId)
+          };
+        });
+
+      const updatedArtworks =
+        this.data.page === 1 ? newArtworks : [...this.data.artworks, ...newArtworks];
+
+      const totalPages = Number(pagination?.pages || 0) || (pagination?.total ? Math.ceil(Number(pagination.total) / this.data.limit) : 0);
+      const hasMore = totalPages ? this.data.page < totalPages : newArtworks.length >= this.data.limit;
+
       this.setData({
         artworks: updatedArtworks,
         hasMore: hasMore,
@@ -118,17 +136,9 @@ Page({
   },
 
   navigateToDetail(e) {
-    console.log('点击事件触发，e:', e);
     const id = e.currentTarget.dataset.id;
-    console.log('准备跳转到作品详情页，id:', id);
     wx.navigateTo({
       url: `/pages/artwork-detail/artwork-detail?id=${id}`,
-      success: function(res) {
-        console.log('跳转成功:', res);
-      },
-      fail: function(err) {
-        console.log('跳转失败:', err);
-      }
     });
   },
 

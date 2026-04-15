@@ -7,7 +7,7 @@
 
     <view class="skills-grid">
       <view class="skill-card" wx:for="{{skills}}" wx:key="id" data-skill="{{item}}" bindtap="selectSkill">
-        <text class="skill-icon">{{item.icon}}</text>
+        <view class="skill-icon">{{item.iconText}}</view>
         <text class="skill-name">{{item.name}}</text>
       </view>
     </view>
@@ -20,14 +20,14 @@
     </view>
 
     <view class="selected-skill">
-      <text class="skill-icon-large">{{selectedSkill.icon}}</text>
+      <view class="skill-icon-large">{{selectedSkill.iconText}}</view>
       <text class="skill-name-large">{{selectedSkill.name}}</text>
     </view>
 
     <view class="upload-area">
       <image wx:if="{{userWork}}" src="{{userWork}}" class="preview-image" mode="aspectFit" />
       <view wx:else class="upload-placeholder" bindtap="chooseImage">
-        <text class="upload-icon">📷</text>
+        <view class="upload-icon">上传</view>
         <text class="upload-text">点击上传作品</text>
       </view>
     </view>
@@ -40,7 +40,7 @@
 
   <view class="step-container" wx:if="{{currentStep === 3}}">
     <view class="analyzing-container">
-      <view class="loading-animation"><text class="spinner">⏳</text></view>
+      <view class="loading-animation"><view class="spinner"></view></view>
       <text class="analyzing-text">正在分析您的作品...</text>
       <text class="analyzing-desc">请稍候，这可能需要一些时间</text>
     </view>
@@ -62,17 +62,23 @@
 
       <view class="result-details" wx:if="{{aiAdvice}}">
         <text class="detail-title">作品优势：</text>
-        <view class="suggestion-item" wx:for="{{aiAdvice.strengths}}" wx:key="index"><text class="suggestion-text">✅ {{item}}</text></view>
+        <view class="suggestion-item" wx:for="{{aiAdvice.strengths}}" wx:key="index">
+          <view class="bullet bullet-good"></view>
+          <text class="suggestion-text">{{item}}</text>
+        </view>
 
         <text class="detail-title">改进建议：</text>
-        <view class="suggestion-item" wx:for="{{aiAdvice.improvements}}" wx:key="index"><text class="suggestion-text">💡 {{item}}</text></view>
+        <view class="suggestion-item" wx:for="{{aiAdvice.improvements}}" wx:key="index">
+          <view class="bullet bullet-tip"></view>
+          <text class="suggestion-text">{{item}}</text>
+        </view>
 
         <text class="detail-title">学习计划：</text>
         <view class="learning-plan">
-          <text class="plan-item">📚 {{aiAdvice.learningPlan.direction}}</text>
-          <text class="plan-item">🎯 {{aiAdvice.learningPlan.professional}}</text>
-          <text class="plan-item">✍️ {{aiAdvice.learningPlan.skills}}</text>
-          <text class="plan-item">👨‍🏫 {{aiAdvice.learningPlan.mentor}}</text>
+          <view class="plan-item"><view class="bullet bullet-plan"></view><text class="plan-text">{{aiAdvice.learningPlan.direction}}</text></view>
+          <view class="plan-item"><view class="bullet bullet-plan"></view><text class="plan-text">{{aiAdvice.learningPlan.professional}}</text></view>
+          <view class="plan-item"><view class="bullet bullet-plan"></view><text class="plan-text">{{aiAdvice.learningPlan.skills}}</text></view>
+          <view class="plan-item"><view class="bullet bullet-plan"></view><text class="plan-text">{{aiAdvice.learningPlan.mentor}}</text></view>
         </view>
       </view>
     </view>

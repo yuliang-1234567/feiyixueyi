@@ -3,7 +3,8 @@
  * 统一处理API请求和错误处理
  */
 
-const DEFAULT_API_BASE_URL = 'https://feiyixueyi.cn/api';
+const { API_BASE } = require('./config');
+const DEFAULT_API_BASE_URL = API_BASE;
 
 function getApiBaseUrl() {
   return DEFAULT_API_BASE_URL;

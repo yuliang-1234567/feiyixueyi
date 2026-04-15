@@ -1,16 +1,17 @@
 /* pages/artwork-detail/artwork-detail.wxss */
 .container {
-  background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%);
+  background: transparent;
   min-height: 100vh;
   padding-bottom: 140rpx;
 }
 
 .image-section {
-  background: #fff;
+  background: var(--fy-card);
+  border-bottom: 2rpx solid rgba(139, 115, 85, 0.14);
   padding: 30rpx;
   margin-bottom: 30rpx;
   border-radius: 0 0 30rpx 30rpx;
-  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.06);
+  box-shadow: var(--fy-shadow-sm);
 }
 
 .artwork-image {
@@ -22,11 +23,12 @@
 }
 
 .info-section {
-  background: #fff;
+  background: var(--fy-card);
+  border: 2rpx solid var(--fy-border);
   padding: 40rpx 30rpx;
   margin: 0 20rpx 30rpx;
   border-radius: 24rpx;
-  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.06);
+  box-shadow: var(--fy-shadow-sm);
 }
 
 .title-row {
@@ -39,26 +41,25 @@
 .artwork-title {
   font-size: 36rpx;
   font-weight: bold;
-  color: #333;
+  color: var(--fy-text);
   flex: 1;
 }
 
 .category-tag {
   font-size: 24rpx;
-  color: #667eea;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  color: var(--fy-accent);
+  background: rgba(200, 16, 46, 0.08);
   padding: 8rpx 18rpx;
   border-radius: 12rpx;
   margin-left: 20rpx;
   font-weight: 600;
-  border: 1rpx solid rgba(102, 126, 234, 0.2);
-  box-shadow: 0 2rpx 8rpx rgba(102, 126, 234, 0.15);
+  border: 1rpx solid rgba(200, 16, 46, 0.14);
 }
 
 .artwork-description {
   display: block;
   font-size: 28rpx;
-  color: #666;
+  color: var(--fy-text-muted);
   line-height: 1.8;
   margin-bottom: 30rpx;
 }
@@ -67,7 +68,7 @@
   display: flex;
   gap: 40rpx;
   padding-top: 20rpx;
-  border-top: 1rpx solid #f0f0f0;
+  border-top: 1rpx solid rgba(139, 115, 85, 0.14);
 }
 
 .meta-item {
@@ -75,12 +76,16 @@
   align-items: center;
   gap: 8rpx;
   font-size: 26rpx;
-  color: #999;
+  color: var(--fy-text-muted);
 }
 
-.meta-item > text:first-child {
-  font-size: 28rpx;
-  margin-right: 8rpx;
+.meta-badge {
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 14rpx;
+  font-size: 20rpx;
+  letter-spacing: 0;
+  box-shadow: none;
 }
 
 .meta-text {
@@ -93,13 +98,12 @@
   left: 0;
   right: 0;
   background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20rpx);
   padding: 24rpx 30rpx;
   display: flex;
   gap: 20rpx;
   box-shadow: 0 -4rpx 20rpx rgba(0, 0, 0, 0.08);
   z-index: 100;
-  border-top: 1rpx solid rgba(0, 0, 0, 0.05);
+  border-top: 1rpx solid rgba(139, 115, 85, 0.14);
 }
 
 .action-btn {

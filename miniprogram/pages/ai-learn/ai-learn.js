@@ -1,5 +1,7 @@
-const API_BASE_URL = 'https://feiyixueyi.cn/api';
-const LEARNING_RECORDS_KEY = 'learning_records_v1';
+const { API_BASE } = require('../../utils/config');
+const { STORAGE_KEYS } = require('../../utils/constants');
+const API_BASE_URL = API_BASE;
+const LEARNING_RECORDS_KEY = STORAGE_KEYS.LEARNING_RECORDS;
 
 Page({
   data: {
@@ -11,12 +13,12 @@ Page({
     aiAdvice: null,
     aiMeta: null,
     skills: [
-      { id: 'peking-opera', name: '京剧', icon: '🎭' },
-      { id: 'paper-cutting', name: '剪纸', icon: '✂️' },
-      { id: 'guqin', name: '古琴', icon: '🎵' },
-      { id: 'embroidery', name: '刺绣', icon: '🧵' },
-      { id: 'pottery', name: '陶艺', icon: '🏺' },
-      { id: 'calligraphy', name: '书法', icon: '🖋️' }
+      { id: 'peking-opera', name: '京剧', iconText: '京' },
+      { id: 'paper-cutting', name: '剪纸', iconText: '剪' },
+      { id: 'guqin', name: '古琴', iconText: '琴' },
+      { id: 'embroidery', name: '刺绣', iconText: '绣' },
+      { id: 'pottery', name: '陶艺', iconText: '陶' },
+      { id: 'calligraphy', name: '书法', iconText: '书' }
     ]
   },
 

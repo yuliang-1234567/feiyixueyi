@@ -1,4 +1,5 @@
-const LEARNING_RECORDS_KEY = 'learning_records_v1';
+const { STORAGE_KEYS } = require('../../utils/constants');
+const LEARNING_RECORDS_KEY = STORAGE_KEYS.LEARNING_RECORDS;
 
 function formatDate(isoText) {
   if (!isoText) return '';

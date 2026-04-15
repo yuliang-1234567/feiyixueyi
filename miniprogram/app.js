@@ -22,7 +22,7 @@ App({
 
   globalData: {
     userInfo: null,
-    apiUrl: 'https://feiyixueyi.cn/api'
+    apiUrl: require('./utils/config').API_BASE
   }
 })
 

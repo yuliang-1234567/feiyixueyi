@@ -22,7 +22,7 @@
           <text class="artwork-category">{{item.category}}</text>
           <view class="artwork-stats">
             <text class="stat-item">
-              <text>👁️</text>
+              <view class="icon-badge icon-badge--muted stat-badge">览</view>
               {{item.views || 0}}
             </text>
             <view class="favorite-btn {{item.isFavorited ? 'active' : ''}}" catchtap="toggleFavorite" data-id="{{item.id}}">

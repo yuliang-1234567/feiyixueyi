@@ -1,6 +1,77 @@
 /**app.wxss**/
 /* 全局样式 - 传统中国艺术风格 */
 page {
+  /* Brand */
+  --fy-accent: #C8102E; /* 朱砂红 */
+  --fy-accent-pressed: #A30D24;
+  --fy-gold: #D4AF37; /* 鎏金点缀 */
+
+  /* Neutrals */
+  --fy-text: #2c2416;
+  --fy-text-muted: #6b5d4f;
+  --fy-border: rgba(139, 115, 85, 0.18);
+  --fy-card: rgba(255, 255, 255, 0.86);
+  --fy-card-solid: #ffffff;
+
+  /* Effects */
+  --fy-shadow-sm: 0 4rpx 20rpx rgba(44, 36, 22, 0.08);
+  --fy-shadow-md: 0 10rpx 32rpx rgba(44, 36, 22, 0.12);
+}
+
+/* 通用 UI Tokens（避免各页面自建一套主题） */
+.text-muted {
+  color: var(--fy-text-muted);
+}
+
+.surface {
+  background: var(--fy-card);
+  border: 2rpx solid var(--fy-border);
+  border-radius: 24rpx;
+  box-shadow: var(--fy-shadow-sm);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--fy-text);
+  border: 2rpx solid var(--fy-border);
+  box-shadow: none;
+}
+
+.btn-secondary:active {
+  opacity: 0.96;
+  transform: translateY(1rpx);
+}
+
+/* icon-badge：用 1 字短标替换 emoji 图标（不引入资源） */
+.icon-badge {
+  width: 84rpx;
+  height: 84rpx;
+  border-radius: 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 34rpx;
+  font-weight: 900;
+  letter-spacing: 2rpx;
+  color: var(--fy-accent);
+  background: rgba(200, 16, 46, 0.10);
+  border: 2rpx solid rgba(200, 16, 46, 0.16);
+  box-shadow: 0 10rpx 22rpx rgba(44, 36, 22, 0.08);
+}
+
+.icon-badge--muted {
+  color: var(--fy-text);
+  background: rgba(44, 36, 22, 0.05);
+  border-color: rgba(139, 115, 85, 0.16);
+}
+
+.icon-badge--gold {
+  color: rgba(44, 36, 22, 0.92);
+  background: rgba(212, 175, 55, 0.16);
+  border-color: rgba(212, 175, 55, 0.26);
+}
+
+page {
   background: linear-gradient(180deg, #fefcf8 0%, #faf9f6 100%);
   background-image: 
     url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%238b7355' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E");
@@ -17,9 +88,13 @@ page {
 
 /* 通用按钮样式 */
 button {
-  border-radius: 12rpx;
-  font-weight: 500;
-  transition: all 0.3s;
+  border-radius: 14rpx;
+  font-weight: 600;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
 
 button::after {
@@ -27,15 +102,15 @@ button::after {
 }
 
 button[type="primary"] {
-  background: linear-gradient(135deg, #8b6f47 0%, #6b5d4f 100%);
+  background: linear-gradient(135deg, var(--fy-accent) 0%, var(--fy-accent-pressed) 100%);
   border: none;
-  box-shadow: 0 4rpx 12rpx rgba(139, 111, 71, 0.3);
+  box-shadow: 0 10rpx 26rpx rgba(200, 16, 46, 0.18);
   color: #fff;
 }
 
 button[type="primary"]:active {
-  opacity: 0.9;
-  transform: scale(0.98);
+  opacity: 0.96;
+  transform: translateY(1rpx);
 }
 
 /* 通用文本样式 */
@@ -52,10 +127,10 @@ text {
 
 /* 通用卡片样式 */
 .card {
-  background: #fff;
+  background: var(--fy-card);
   border-radius: 20rpx;
-  border: 2rpx solid #e8e0d6;
-  box-shadow: 0 4rpx 20rpx rgba(139, 111, 71, 0.12);
+  border: 2rpx solid rgba(139, 115, 85, 0.16);
+  box-shadow: var(--fy-shadow-sm);
   overflow: hidden;
 }
 

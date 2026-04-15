@@ -338,7 +338,7 @@
 /* 第四步：获得建议 - 触发区 */
 .advice-trigger {
   margin-top: auto;
-  padding: 16px 0;
+  padding: 0 0 10px;
 }
 
 .advice-trigger-text {
@@ -652,7 +652,7 @@
   border-radius: 4px;
   font-size: 13px;
   font-weight: 600;
-  margin-top: 10px;
+  /* margin-top: 10px; */
   font-family: "KaiTi", "STKaiti", "SimKai", serif;
 }
 

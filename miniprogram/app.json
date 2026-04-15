@@ -16,14 +16,14 @@
   ],
   "window": {
     "backgroundTextStyle": "light",
-    "navigationBarBackgroundColor": "#667eea",
-    "navigationBarTitleText": "非遗技艺平台",
+    "navigationBarBackgroundColor": "#C8102E",
+    "navigationBarTitleText": "非遗学艺",
     "navigationBarTextStyle": "white",
     "enablePullDownRefresh": true
   },
   "tabBar": {
     "color": "#7A7E83",
-    "selectedColor": "#667eea",
+    "selectedColor": "#C8102E",
     "borderStyle": "black",
     "backgroundColor": "#ffffff",
     "list": [

@@ -1,7 +1,7 @@
 <!--pages/my-artworks/my-artworks.wxml-->
 <view class="page">
   <view class="hero-card">
-    <view class="hero-icon">🎨</view>
+    <view class="icon-badge icon-badge--muted hero-badge">作</view>
     <view class="hero-info">
       <text class="hero-title">我的作品</text>
       <text class="hero-desc">管理与分享我的非遗作品</text>

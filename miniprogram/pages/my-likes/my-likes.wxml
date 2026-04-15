@@ -1,7 +1,7 @@
 <!--pages/my-likes/my-likes.wxml-->
 <view class="page">
   <view class="hero-card">
-    <view class="hero-icon">❤️</view>
+    <view class="icon-badge icon-badge--gold hero-badge">藏</view>
     <view class="hero-info">
       <text class="hero-title">我的收藏</text>
       <text class="hero-desc">收藏的作品与文创商品</text>
@@ -24,11 +24,11 @@
         <text class="like-desc" wx:if="{{item.description}}">{{item.description}}</text>
         <view class="like-footer">
           <view class="like-stat">
-            <text class="stat-icon">❤️</text>
+            <view class="icon-badge icon-badge--gold stat-badge">赞</view>
             <text>{{item.likesCount || 0}}</text>
           </view>
           <view class="like-stat">
-            <text class="stat-icon">👁️</text>
+            <view class="icon-badge icon-badge--muted stat-badge">览</view>
             <text>{{item.views || 0}}</text>
           </view>
         </view>
@@ -41,7 +41,7 @@
   </view>
 
   <view class="empty" wx:if="{{!loading && likes.length === 0}}">
-    <text class="empty-icon">💕</text>
+    <view class="icon-badge icon-badge--gold empty-badge">藏</view>
     <text class="empty-title">暂时还没有收藏</text>
     <text class="empty-desc">在作品页点击“收藏”后会出现在这里</text>
   </view>

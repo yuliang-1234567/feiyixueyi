@@ -1,6 +1,6 @@
 {
-  "navigationBarTitleText": "非遗地图",
-  "navigationBarBackgroundColor": "#667eea",
+  "navigationBarTitleText": "地域学习",
   "navigationBarTextStyle": "white",
-  "enablePullDownRefresh": false
+  "enablePullDownRefresh": false,
+  "usingComponents": {}
 }

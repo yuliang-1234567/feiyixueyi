@@ -1,6 +1,7 @@
 // pages/ar/ar.js
 const api = require('../../utils/api.js');
-const API_BASE_URL = 'https://feiyixueyi.cn/api';
+const { API_BASE } = require('../../utils/config');
+const API_BASE_URL = API_BASE;
 
 Page({
   data: {

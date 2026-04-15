@@ -1,6 +1,7 @@
 // pages/artwork-detail/artwork-detail.js
 const api = require('../../utils/api.js');
 const mockArtworks = require('../../utils/galleryWorksMock');
+const { shouldHideFromMiniProgram } = require('../../utils/filters');
 
 // 检查是否是 mock 作品
 function isMockArtworkId(id) {
@@ -12,11 +13,6 @@ function getMockArtworkById(id) {
   if (!id) return null;
   const found = mockArtworks.find((a) => String(a.id) === String(id));
   return found ? { ...found, isLiked: false } : null;
-}
-
-function shouldHideFromMiniProgram(item) {
-  const tags = Array.isArray(item?.tags) ? item.tags : [];
-  return tags.includes('数字焕新') || tags.includes('文创产品');
 }
 
 Page({

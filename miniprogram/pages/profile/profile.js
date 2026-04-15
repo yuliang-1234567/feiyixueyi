@@ -1,7 +1,9 @@
 // pages/profile/profile.js
 const api = require('../../utils/api.js');
-const DEFAULT_AVATAR_URL = 'https://feiyixueyi.cn/uploads/images/categories/background.jpg';
-const FAVORITE_KEY = 'favorite_artwork_ids_v1';
+const { IMAGES_BASE } = require('../../utils/config');
+const { STORAGE_KEYS } = require('../../utils/constants');
+const DEFAULT_AVATAR_URL = `${IMAGES_BASE}/categories/background.jpg`;
+const FAVORITE_KEY = STORAGE_KEYS.FAVORITE_ARTWORK_IDS;
 
 Page({
   data: {
@@ -79,7 +81,7 @@ Page({
   },
 
   async loadStats() {
-    const learningRecords = wx.getStorageSync('learning_records_v1');
+    const learningRecords = wx.getStorageSync(STORAGE_KEYS.LEARNING_RECORDS);
     const favorites = wx.getStorageSync(FAVORITE_KEY);
     const learningCount = Array.isArray(learningRecords) ? learningRecords.length : 0;
     const likesCount = Array.isArray(favorites) ? favorites.length : 0;

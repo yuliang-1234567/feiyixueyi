@@ -1,7 +1,7 @@
 /* pages/login/login.wxss */
 .container {
   min-height: 100vh;
-  background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%);
+  background: transparent;
   padding: 80rpx 40rpx;
 }
 
@@ -13,24 +13,22 @@
 .title {
   font-size: 48rpx;
   font-weight: 700;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--fy-text);
 }
 
 .subtitle {
   display: block;
   margin-top: 16rpx;
   font-size: 28rpx;
-  color: #666;
+  color: var(--fy-text-muted);
 }
 
 .form-card {
-  background: #fff;
+  background: var(--fy-card);
+  border: 2rpx solid var(--fy-border);
   border-radius: 24rpx;
   padding: 40rpx 32rpx;
-  box-shadow: 0 12rpx 32rpx rgba(0, 0, 0, 0.08);
+  box-shadow: var(--fy-shadow-md);
 }
 
 .form-item {
@@ -40,7 +38,7 @@
 .label {
   display: block;
   font-size: 28rpx;
-  color: #333;
+  color: var(--fy-text);
   margin-bottom: 16rpx;
 }
 
@@ -49,14 +47,14 @@
   height: 88rpx;
   padding: 0 24rpx;
   border-radius: 16rpx;
-  border: 1rpx solid #e0e0e0;
+  border: 1rpx solid rgba(139, 115, 85, 0.22);
   font-size: 30rpx;
-  background: #f9f9f9;
+  background: rgba(255, 255, 255, 0.88);
 }
 
 .input:focus {
-  border-color: #667eea;
-  box-shadow: 0 0 0 2rpx rgba(102, 126, 234, 0.2);
+  border-color: rgba(200, 16, 46, 0.55);
+  box-shadow: 0 0 0 2rpx rgba(200, 16, 46, 0.16);
   background: #fff;
 }
 
@@ -66,8 +64,7 @@
   border-radius: 16rpx;
   font-size: 32rpx;
   font-weight: 600;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  box-shadow: 0 8rpx 20rpx rgba(102, 126, 234, 0.3);
+  box-shadow: 0 8rpx 20rpx rgba(200, 16, 46, 0.22);
 }
 
 .helper {
@@ -77,7 +74,7 @@
 
 .link {
   font-size: 26rpx;
-  color: #667eea;
+  color: var(--fy-accent);
 }
 
 .link:active {

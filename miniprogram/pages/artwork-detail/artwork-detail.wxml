@@ -15,7 +15,7 @@
     
     <view class="meta-row">
       <view class="meta-item">
-        <text>👁️</text>
+        <view class="icon-badge icon-badge--muted meta-badge">览</view>
         <text class="meta-text">浏览 {{artwork.views || 0}}</text>
       </view>
     </view>

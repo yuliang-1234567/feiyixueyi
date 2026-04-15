@@ -6,7 +6,7 @@
 
   <view class="content">
     <view class="logo-section">
-      <text class="logo">🎨</text>
+      <view class="icon-badge icon-badge--muted about-badge">非</view>
       <text class="app-name">{{appName}}</text>
       <text class="version">版本 {{version}}</text>
     </view>

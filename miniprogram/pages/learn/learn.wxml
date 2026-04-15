@@ -1,12 +1,12 @@
 <view class="container">
   <view class="hero">
-    <text class="hero-title">地域非遗地图</text>
-    <text class="hero-desc">点击省份查看代表性非遗项目与简介，体验类似 Web 端的互动探索。</text>
+    <text class="hero-title">地域学习</text>
+    <text class="hero-desc">按省份浏览代表性非遗项目与简介，快速建立你的文化坐标。</text>
   </view>
 
   <view class="map-card">
     <view class="map-head">
-      <text class="map-title">中国省份互动地图</text>
+      <text class="map-title">省份与非遗项目</text>
       <text class="map-sub">选择省份查看非遗详情</text>
     </view>
 
@@ -38,6 +38,13 @@
   <view class="panel-mask" wx:if="{{showProvincePanel}}" bindtap="closeProvincePanel">
     <view class="panel" catchtap="true">
       <view class="panel-title">{{selectedProvince.name}} · {{selectedProvince.heritage}}</view>
+      <image
+        wx:if="{{selectedProvince.imgUrl}}"
+        class="panel-image"
+        src="{{mapImageBase}}/{{selectedProvince.imgUrl}}"
+        mode="aspectFill"
+        lazy-load
+      />
       <scroll-view class="panel-content-wrap" scroll-y="true">
         <text class="panel-content">{{selectedProvince.description}}</text>
       </scroll-view>
