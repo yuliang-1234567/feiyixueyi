@@ -7,6 +7,7 @@ const Artwork = require('../models/Artwork');
 const { authenticate } = require('../middleware/auth');
 const { generateQwenLearnAnalysis } = require('../utils/qwen');
 const { enhanceImageWithQwen } = require('../utils/qwenImageEdit');
+const { getStylePrompt } = require('../utils/heritageStyleMap');
 
 const router = express.Router();
 
@@ -37,6 +38,39 @@ function checkTransformRateLimit(userId) {
     return {
       allowed: false,
       remainingMs: TRANSFORM_RATE_LIMIT_WINDOW_MS - (now - bucket.windowStart),
+    };
+  }
+
+  return { allowed: true };
+}
+
+// 简单内存限流：针对「一笔成纹 /heritage-sketch-generate」接口，按用户限流
+const HERITAGE_SKETCH_RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 分钟窗口
+const HERITAGE_SKETCH_RATE_LIMIT_MAX = 10; // 每用户每窗口最多 10 次
+const heritageSketchRateBuckets = new Map(); // userId -> { windowStart, count }
+
+function checkHeritageSketchRateLimit(userId) {
+  if (!userId) {
+    return { allowed: true };
+  }
+  const now = Date.now();
+  const bucket = heritageSketchRateBuckets.get(userId) || {
+    windowStart: now,
+    count: 0,
+  };
+
+  if (now - bucket.windowStart > HERITAGE_SKETCH_RATE_LIMIT_WINDOW_MS) {
+    bucket.windowStart = now;
+    bucket.count = 0;
+  }
+
+  bucket.count += 1;
+  heritageSketchRateBuckets.set(userId, bucket);
+
+  if (bucket.count > HERITAGE_SKETCH_RATE_LIMIT_MAX) {
+    return {
+      allowed: false,
+      remainingMs: HERITAGE_SKETCH_RATE_LIMIT_WINDOW_MS - (now - bucket.windowStart),
     };
   }
 
@@ -632,6 +666,128 @@ router.post('/generate-product', authenticate, async (req, res) => {
     });
   } catch (error) {
     console.error('❌ [GenerateProduct] 生成失败:', { message: error.message, stack: error.stack });
+    return res.status(500).json({
+      success: false,
+      message: error.message || '生成失败，请稍后重试',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+// 一笔成纹：用户草图 + 非遗风格 -> 生成纹样/效果图（返回 1 张图片）
+router.post('/heritage-sketch-generate', authenticate, async (req, res) => {
+  try {
+    const rate = checkHeritageSketchRateLimit(req.user && req.user.id);
+    if (!rate.allowed) {
+      return res.status(429).json({
+        success: false,
+        message: '请求过于频繁，请稍后再试（一笔成纹每分钟最多 10 次）',
+      });
+    }
+
+    const { sketchBase64, styleKey, customStylePrompt, description, referenceImageUrl } = req.body || {};
+
+    const raw = String(sketchBase64 || '').trim();
+    if (!raw) {
+      return res.status(400).json({
+        success: false,
+        message: '请先提供草图 sketchBase64',
+      });
+    }
+
+    const stylePrompt = getStylePrompt(styleKey, customStylePrompt);
+    const allowedStyleKeys = ['paper-cutting', 'blue-white-porcelain', 'embroidery', 'custom'];
+    if (!styleKey || !allowedStyleKeys.includes(styleKey)) {
+      return res.status(400).json({
+        success: false,
+        message: '请选择非遗风格',
+      });
+    }
+
+    const match = raw.match(/^data:(.+);base64,(.+)$/);
+    const b64 = match ? match[2] : raw;
+
+    let buffer;
+    try {
+      buffer = Buffer.from(b64, 'base64');
+    } catch {
+      buffer = null;
+    }
+    if (!buffer || !buffer.length) {
+      return res.status(400).json({
+        success: false,
+        message: '草图 base64 解析失败，请重试',
+      });
+    }
+
+    // 写入临时草图文件（用于 enhanceImageWithQwen 的 baseImagePath）
+    const sketchFilename = `heritage-sketch-${Date.now()}-${Math.round(Math.random() * 1e9)}.png`;
+    const sketchFilePath = path.join(tempUploadDir, sketchFilename);
+    await fs.promises.writeFile(sketchFilePath, buffer);
+
+    // 构造可能可访问的公共 URL（用于可选的 URL 取图；私网/localhost 会被后端安全逻辑兜底成 data-url）
+    const forwardedProto = (req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
+    const proto = forwardedProto || req.protocol;
+    const baseUrl = `${proto}://${req.get('host')}`.replace(/\/$/, '');
+    const sketchPublicUrl = `${baseUrl}/uploads/temp/${sketchFilename}`;
+
+    const finalAiPromptParts = [
+      '请把用户草图转化为适合非遗文创的高质量纹样/纹理图。',
+      '要求：保留草图中的关键线稿与构图；纹样更清晰、更有层次；边缘干净；背景简洁；无文字无logo。',
+      '输出：适合作为产品纹样贴合的效果图（纹样不要被裁切，留出适当边界）。',
+    ];
+    if (description && String(description).trim()) {
+      finalAiPromptParts.push('产品描述：' + String(description).trim());
+    }
+    if (referenceImageUrl && String(referenceImageUrl).trim()) {
+      finalAiPromptParts.push('参考来源：用户从数字焕新迁移了已有产品效果图，请尽量保持主题连续性与产品语义一致。');
+    }
+    const finalAiPrompt = finalAiPromptParts.join('\n');
+
+    const aiEnhanced = await enhanceImageWithQwen({
+      baseImagePath: sketchFilePath,
+      baseImageUrl: sketchPublicUrl,
+      productType: '非遗纹样',
+      stylePrompt,
+      aiPrompt: finalAiPrompt,
+    });
+
+    // 无 key / 模型不可用时，enhanceImageWithQwen 会返回 null；此处兜底返回“草图本身”
+    let transformedImageUrl = null;
+    let transformSource = 'sketch-fallback';
+    let aiMeta = null;
+
+    if (aiEnhanced && aiEnhanced.buffer) {
+      const aiFilename = `heritage-sketch-out-${Date.now()}-${Math.round(Math.random() * 1e9)}.png`;
+      const aiFilePath = path.join(artworksUploadDir, aiFilename);
+      await fs.promises.writeFile(aiFilePath, aiEnhanced.buffer);
+
+      transformedImageUrl = `/uploads/artworks/${aiFilename}`;
+      transformSource = 'ai';
+      aiMeta = {
+        provider: aiEnhanced.provider,
+        model: aiEnhanced.model,
+        triedModels: aiEnhanced.triedModels || [aiEnhanced.model],
+      };
+    } else {
+      const fallbackFilename = `heritage-sketch-fallback-${Date.now()}-${Math.round(Math.random() * 1e9)}.png`;
+      const fallbackFilePath = path.join(artworksUploadDir, fallbackFilename);
+      await fs.promises.writeFile(fallbackFilePath, buffer);
+      transformedImageUrl = `/uploads/artworks/${fallbackFilename}`;
+    }
+
+    return res.json({
+      success: true,
+      message: '生成纹样成功',
+      data: {
+        transformedImageUrl,
+        productType: '非遗纹样',
+        transformSource,
+        ai: aiMeta,
+      },
+    });
+  } catch (error) {
+    console.error('❌ [HeritageSketch] 生成失败:', { message: error.message, stack: error.stack });
     return res.status(500).json({
       success: false,
       message: error.message || '生成失败，请稍后重试',

@@ -13,6 +13,7 @@ const Home = lazy(() => import('./pages/Home'));
 const HeritageLearn = lazy(() => import('./pages/HeritageLearn'));
 const Learn = lazy(() => import('./pages/Learn'));
 const Transform = lazy(() => import('./pages/Transform'));
+const HeritageSketch = lazy(() => import('./pages/HeritageSketch'));
 const Gallery = lazy(() => import('./pages/Gallery'));
 const Shop = lazy(() => import('./pages/Shop'));
 const Cart = lazy(() => import('./pages/Cart'));
@@ -47,6 +48,14 @@ function App() {
                     <Transform />
                   </ProtectedRoute>
                 } 
+              />
+              <Route
+                path="/heritage-sketch"
+                element={
+                  <ProtectedRoute>
+                    <HeritageSketch />
+                  </ProtectedRoute>
+                }
               />
               <Route path="/gallery" element={<Gallery />} />
               <Route path="/shop" element={<Shop />} />

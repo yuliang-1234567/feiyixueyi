@@ -1,0 +1,230 @@
+.heritage-sketch-page {
+  padding: 18px 0;
+  background: transparent;
+  position: relative;
+  overflow: visible;
+}
+
+.heritage-sketch-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 24px;
+  position: relative;
+  z-index: 1;
+}
+
+.heritage-sketch-header {
+  text-align: center;
+  margin-bottom: 14px;
+}
+
+.heritage-sketch-title {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0;
+  color: #333;
+}
+
+.heritage-sketch-subtitle {
+  margin: 8px auto 0;
+  max-width: 860px;
+  color: #666;
+  line-height: 1.8;
+}
+
+.heritage-twoPane {
+  display: flex;
+  gap: 16px;
+  min-height: 620px;
+}
+
+.heritage-leftPane {
+  width: calc(50% - 8px);
+  flex: 0 0 calc(50% - 8px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.heritage-rightPane {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+}
+
+.heritage-card {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #eee;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  padding: 14px;
+  width: 100%;
+}
+
+.heritage-cardTitle {
+  font-weight: 800;
+  color: #1e293b;
+  margin-bottom: 10px;
+}
+
+.heritage-toolbarCard {
+  margin-bottom: 16px;
+}
+
+.heritage-toolbarTop {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.heritage-toolbarMainItem {
+  flex: 1;
+  margin-bottom: 12px;
+}
+
+.heritage-toolbarActions {
+  width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 30px;
+}
+
+.heritage-generateBtn,
+.heritage-saveBtn {
+  border-radius: 10px;
+}
+
+.heritage-toolbarBottom {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.heritage-styleBlock {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.heritage-styleBlockFlex {
+  flex: 1;
+  min-width: 320px;
+}
+
+.heritage-inlineLabel {
+  font-weight: 700;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.heritage-styleSelect {
+  min-width: 180px;
+}
+
+.heritage-currentTag {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.heritage-previewCard {
+  position: relative;
+}
+
+.heritage-previewHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.heritage-previewTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.heritage-previewBody {
+  position: relative;
+  min-height: 540px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(200, 16, 46, 0.03), rgba(139, 111, 71, 0.04));
+  border: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.heritage-previewImageWrap {
+  width: 100%;
+  height: 100%;
+  min-height: 540px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+}
+
+.heritage-previewImage {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.heritage-previewPlaceholder {
+  min-height: 540px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+}
+
+.heritage-previewPlaceholderInner {
+  max-width: 420px;
+  text-align: center;
+  color: #64748b;
+  line-height: 1.8;
+  font-weight: 600;
+}
+
+.heritage-previewLoading {
+  position: absolute;
+  inset: 0;
+  background: rgba(248, 250, 252, 0.82);
+  backdrop-filter: blur(6px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.heritage-previewLoadingText {
+  color: #334155;
+  font-weight: 600;
+}
+
+@media (max-width: 1024px) {
+  .heritage-twoPane {
+    flex-direction: column;
+  }
+
+  .heritage-leftPane {
+    width: 100%;
+    flex: 0 0 auto;
+  }
+
+  .heritage-toolbarTop {
+    flex-direction: column;
+  }
+
+  .heritage-toolbarActions {
+    width: 100%;
+    padding-top: 0;
+  }
+}
+

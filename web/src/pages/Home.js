@@ -477,6 +477,29 @@ const Home = () => {
               tabIndex={0}
               onKeyDown={(e) => {
                 if (e.key === "Enter")
+                  goWithRecent({ title: "一笔成纹", path: "/heritage-sketch" });
+              }}
+              onClick={() =>
+                goWithRecent({ title: "一笔成纹", path: "/heritage-sketch" })
+              }
+            >
+              <div className="module-image-wrapper">
+                <img
+                  src="/images/home/modules/3.png"
+                  alt="一笔成纹"
+                  className="module-image"
+                />
+              </div>
+              <h3 className="module-title">一笔成纹</h3>
+              <p className="module-description">草图成非遗纹样，快速生成效果</p>
+              <div className="module-tag">草图成纹</div>
+            </div>
+            <div
+              className="module-card"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter")
                   goWithRecent({ title: "大师作品库", path: "/gallery" });
               }}
               onClick={() => goWithRecent({ title: "大师作品库", path: "/gallery" })}

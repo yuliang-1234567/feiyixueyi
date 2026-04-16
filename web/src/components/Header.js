@@ -71,6 +71,11 @@ const Header = () => {
       label: '数字焕新',
     },
     {
+      key: '/heritage-sketch',
+      icon: <LucideIcon icon={Palette} />,
+      label: '一笔成纹',
+    },
+    {
       key: '/gallery',
       icon: <LucideIcon icon={Home} />,
       label: '作品市',

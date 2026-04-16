@@ -1,0 +1,52 @@
+.sketch-canvasWrap {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sketch-canvasFrame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  background: #fff;
+}
+
+.sketch-canvas {
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  display: block;
+  user-select: none;
+}
+
+.sketch-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  color: rgba(71, 85, 105, 0.9);
+  font-weight: 700;
+  text-align: center;
+  pointer-events: none;
+  background: linear-gradient(
+    135deg,
+    rgba(200, 16, 46, 0.05) 0%,
+    rgba(139, 111, 71, 0.04) 100%
+  );
+}
+
+.sketch-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.sketch-clearBtn {
+  border-radius: 10px;
+}
+

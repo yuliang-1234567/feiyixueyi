@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Form, Input, InputNumber, Modal, Select, Spin, Switch, Tag, message } from 'antd';
-import { Save, Wand2 } from "lucide-react";
+import { PencilRuler, Save, Wand2 } from "lucide-react";
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { useAuthStore } from '../store/authStore';
@@ -345,6 +345,35 @@ function Transform() {
                 >
                   生成效果
                 </Button>
+                {result ? (
+                  <Button
+                    icon={<LucideIcon icon={PencilRuler} />}
+                    onClick={() => {
+                      const current = form.getFieldsValue();
+                      const productLabel = buildProductLabel(current);
+                      const styleLabel = buildStylePrompt(current);
+                      const description = String(current.description || '').trim();
+                      const migratedDescription = [
+                        description,
+                        productLabel ? `产品：${productLabel}` : '',
+                        styleLabel ? `风格：${styleLabel}` : '',
+                      ].filter(Boolean).join('；');
+
+                      navigate('/heritage-sketch', {
+                        state: {
+                          sourceImageUrl: result.transformedImageUrl,
+                          sourceDescription: migratedDescription,
+                          sourceProductType: productLabel,
+                          sourceStylePrompt: styleLabel,
+                        },
+                      });
+                    }}
+                    className="save-btn secondary"
+                    block
+                  >
+                    迁移到一笔成纹
+                  </Button>
+                ) : null}
                 {result ? (
                   <Button
                     icon={<LucideIcon icon={Save} />}
