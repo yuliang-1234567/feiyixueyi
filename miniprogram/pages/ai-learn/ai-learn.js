@@ -13,12 +13,12 @@ Page({
     aiAdvice: null,
     aiMeta: null,
     skills: [
-      { id: 'peking-opera', name: '京剧', iconText: '京' },
-      { id: 'paper-cutting', name: '剪纸', iconText: '剪' },
-      { id: 'guqin', name: '古琴', iconText: '琴' },
-      { id: 'embroidery', name: '刺绣', iconText: '绣' },
-      { id: 'pottery', name: '陶艺', iconText: '陶' },
-      { id: 'calligraphy', name: '书法', iconText: '书' }
+      { id: 'peking-opera', name: '京剧', iconText: '京', icon: '../../images/tar_icon/peking_opera.png' },
+      { id: 'paper-cutting', name: '剪纸', iconText: '剪', icon: '../../images/tar_icon/paper_cutting.png' },
+      { id: 'guqin', name: '古琴', iconText: '琴', icon: '../../images/tar_icon/Guqin.png' },
+      { id: 'embroidery', name: '刺绣', iconText: '绣', icon: '../../images/tar_icon/embroidery.png' },
+      { id: 'pottery', name: '陶艺', iconText: '陶', icon: '../../images/tar_icon/pottery.png' },
+      { id: 'calligraphy', name: '书法', iconText: '书', icon: '../../images/tar_icon/calligraphy.png' }
     ]
   },
 

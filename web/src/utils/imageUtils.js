@@ -6,8 +6,8 @@
 const API_BASE_URL =
   (process.env.REACT_APP_API_URL || '').replace(/\/api\/?$/, '') ||
   (process.env.NODE_ENV === 'development'
-    ? 'http://localhost:3100'
-    : 'http://121.199.74.74');
+    ? 'https://feiyixueyi.cn'
+    : 'https://feiyixueyi.cn');
 
 const FALLBACK_IMAGE_DATA_URL =
   'data:image/svg+xml;utf8,' +

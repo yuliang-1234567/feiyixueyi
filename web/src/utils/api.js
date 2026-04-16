@@ -1,10 +1,14 @@
 import axios from 'axios';
 
-const API_BASE_URL =
-  process.env.REACT_APP_API_URL ||
-  (process.env.NODE_ENV === 'development'
-    ? 'http://localhost:3100/api'
-    : 'https://feiyixueyi.cn/api');
+const isDev = process.env.NODE_ENV === 'development';
+const isLocalHost =
+  typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname);
+
+const API_BASE_URL = isDev
+  ? (isLocalHost
+      ? (process.env.REACT_APP_LOCAL_API_URL || 'http://localhost:3100/api')
+      : (process.env.REACT_APP_API_URL || 'https://feiyixueyi.cn/api'))
+  : (process.env.REACT_APP_API_URL || 'https://feiyixueyi.cn/api');
 
 const api = axios.create({
   baseURL: API_BASE_URL,

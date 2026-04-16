@@ -28,15 +28,6 @@
   box-shadow: var(--fy-shadow-sm);
 }
 
-.about-badge {
-  width: 120rpx;
-  height: 120rpx;
-  border-radius: 32rpx;
-  font-size: 44rpx;
-  margin: 0 auto 20rpx;
-  box-shadow: var(--fy-shadow-sm);
-}
-
 .app-name {
   display: block;
   font-size: 40rpx;

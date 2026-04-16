@@ -6,7 +6,6 @@
 
   <view class="content">
     <view class="logo-section">
-      <view class="icon-badge icon-badge--muted about-badge">非</view>
       <text class="app-name">{{appName}}</text>
       <text class="version">版本 {{version}}</text>
     </view>
@@ -24,7 +23,7 @@
 
       <view class="info-item">
         <text class="info-label">联系我们</text>
-        <text class="info-text">邮箱：contact@ihc-platform.com\n电话：400-000-0000</text>
+        <text class="info-text">邮箱：13035397663@163.com\n电话：13035397663</text>
       </view>
     </view>
 

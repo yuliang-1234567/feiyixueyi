@@ -44,14 +44,6 @@
   align-items: center;
 }
 
-.setting-badge {
-  margin-right: 20rpx;
-  width: 72rpx;
-  height: 72rpx;
-  border-radius: 20rpx;
-  font-size: 30rpx;
-}
-
 .setting-text {
   font-size: 28rpx;
   color: var(--fy-text);

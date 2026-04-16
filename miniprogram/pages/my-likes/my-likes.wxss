@@ -19,16 +19,9 @@
   margin-bottom: 40rpx;
 }
 
-.hero-badge {
-  width: 100rpx;
-  height: 100rpx;
-  border-radius: 24rpx;
-  font-size: 34rpx;
-}
-
 .hero-info {
   flex: 1;
-  padding-left: 30rpx;
+  padding-left: 0;
 }
 
 .hero-title {

@@ -18,6 +18,11 @@ const sequelize = new Sequelize(dbName, dbUser, dbPassword, {
   host: dbHost,
   port: dbPort,
   dialect: 'mysql',
+  dialectOptions: {
+    charset: 'utf8mb4',
+  },
+  charset: 'utf8mb4',
+  collate: 'utf8mb4_unicode_ci',
   logging: process.env.NODE_ENV === 'development' ? console.log : false,
   pool: {
     max: 5,

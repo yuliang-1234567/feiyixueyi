@@ -3,11 +3,22 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const sharp = require('sharp');
+const { Op } = require('sequelize');
 const Artwork = require('../models/Artwork');
+const { sequelize } = require('../config/database');
 const { authenticate } = require('../middleware/auth');
 const { generateQwenLearnAnalysis } = require('../utils/qwen');
-const { enhanceImageWithQwen } = require('../utils/qwenImageEdit');
+const { enhanceImageWithQwen, generateThenEnhanceWithQwen } = require('../utils/qwenImageEdit');
 const { getStylePrompt } = require('../utils/heritageStyleMap');
+const HeritageQaMessage = require('../models/HeritageQaMessage');
+const HeritageQuizQuestion = require('../models/HeritageQuizQuestion');
+const HeritageQuizSession = require('../models/HeritageQuizSession');
+const HeritageQuizSessionAnswer = require('../models/HeritageQuizSessionAnswer');
+const {
+  getCategoryMeta,
+  generateHeritageQaAnswer,
+  generateAiQuizQuestions,
+} = require('../utils/heritageQaQuiz');
 
 const router = express.Router();
 
@@ -15,29 +26,36 @@ const router = express.Router();
 const TRANSFORM_RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 分钟窗口
 const TRANSFORM_RATE_LIMIT_MAX = 10; // 每用户每窗口最多 10 次
 const transformRateBuckets = new Map(); // userId -> { windowStart, count }
+const QA_RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const QA_RATE_LIMIT_MAX = 15;
+const QUIZ_SUBMIT_RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const QUIZ_SUBMIT_RATE_LIMIT_MAX = 10;
+const qaRateBuckets = new Map();
+const quizSubmitRateBuckets = new Map();
 
-function checkTransformRateLimit(userId) {
+function checkUserRateLimit(bucketMap, userId, windowMs, maxCount) {
   if (!userId) {
     return { allowed: true };
   }
+
   const now = Date.now();
-  const bucket = transformRateBuckets.get(userId) || {
+  const bucket = bucketMap.get(userId) || {
     windowStart: now,
     count: 0,
   };
 
-  if (now - bucket.windowStart > TRANSFORM_RATE_LIMIT_WINDOW_MS) {
+  if (now - bucket.windowStart > windowMs) {
     bucket.windowStart = now;
     bucket.count = 0;
   }
 
   bucket.count += 1;
-  transformRateBuckets.set(userId, bucket);
+  bucketMap.set(userId, bucket);
 
-  if (bucket.count > TRANSFORM_RATE_LIMIT_MAX) {
+  if (bucket.count > maxCount) {
     return {
       allowed: false,
-      remainingMs: TRANSFORM_RATE_LIMIT_WINDOW_MS - (now - bucket.windowStart),
+      remainingMs: windowMs - (now - bucket.windowStart),
     };
   }
 
@@ -75,6 +93,15 @@ function checkHeritageSketchRateLimit(userId) {
   }
 
   return { allowed: true };
+}
+
+function checkTransformRateLimit(userId) {
+  return checkUserRateLimit(
+    transformRateBuckets,
+    userId,
+    TRANSFORM_RATE_LIMIT_WINDOW_MS,
+    TRANSFORM_RATE_LIMIT_MAX
+  );
 }
 
 // 确保上传目录存在
@@ -460,6 +487,885 @@ router.post('/learn', authenticate, upload.single('image'), async (req, res) => 
   }
 });
 
+function normalizeOption(value) {
+  const text = String(value || '').trim().toUpperCase();
+  if (['A', 'B', 'C', 'D', 'E', 'F'].includes(text)) return text;
+  return null;
+}
+
+function normalizeAnswerByType(value, questionType) {
+  const raw = String(value || '').trim().toUpperCase();
+  if (!raw) return null;
+
+  if (questionType === 'judge') {
+    if (raw === 'A' || raw.includes('正确') || raw === 'TRUE') return 'A';
+    if (raw === 'B' || raw.includes('错误') || raw === 'FALSE') return 'B';
+    return null;
+  }
+
+  const letters = Array.from(raw.replace(/[^A-F]/g, ''));
+  if (!letters.length) return null;
+
+  const uniqSorted = [...new Set(letters)].sort().join('');
+  if (questionType === 'multiple') {
+    return uniqSorted.length >= 2 ? uniqSorted : null;
+  }
+
+  return uniqSorted.length === 1 ? uniqSorted : null;
+}
+
+function detectQuestionType(item = {}) {
+  const inputType = String(item.questionType || '').trim().toLowerCase();
+  if (['single', 'multiple', 'judge'].includes(inputType)) {
+    return inputType;
+  }
+
+  const answerText = String(item.correctAnswer || item.correctOption || '').trim().toUpperCase();
+  if (/正确|错误|TRUE|FALSE/.test(answerText)) {
+    return 'judge';
+  }
+
+  const letters = answerText.replace(/[^A-F]/g, '');
+  if (letters.length >= 2) {
+    return 'multiple';
+  }
+
+  return 'single';
+}
+
+function validateQuestionPayload(item = {}) {
+  const questionType = detectQuestionType(item);
+  const stem = String(item.stem || '').trim();
+  let optionA = String(item.optionA || '').trim();
+  let optionB = String(item.optionB || '').trim();
+  const optionC = String(item.optionC || '').trim() || null;
+  const optionD = String(item.optionD || '').trim() || null;
+  const optionE = String(item.optionE || '').trim() || null;
+  const optionF = String(item.optionF || '').trim() || null;
+
+  if (questionType === 'judge') {
+    optionA = optionA || '正确';
+    optionB = optionB || '错误';
+  }
+
+  const correctAnswer = normalizeAnswerByType(
+    item.correctAnswer || item.correctOption,
+    questionType
+  );
+
+  if (!stem || !optionA || !optionB || !correctAnswer) {
+    return null;
+  }
+
+  if (questionType === 'single' && !optionC) {
+    return null;
+  }
+
+  const sourceType = ['ai', 'official', 'competition'].includes(item.sourceType)
+    ? item.sourceType
+    : 'official';
+  const status = ['draft', 'published', 'archived'].includes(item.status)
+    ? item.status
+    : 'published';
+  const difficulty = ['easy', 'medium', 'hard'].includes(item.difficulty)
+    ? item.difficulty
+    : 'medium';
+
+  const category = getCategoryMeta(item.categoryId, item.categoryName);
+
+  return {
+    categoryId: category.id,
+    categoryName: category.name,
+    difficulty,
+    questionType,
+    stem,
+    optionA,
+    optionB,
+    optionC,
+    optionD,
+    optionE,
+    optionF,
+    correctOption: questionType === 'single' ? correctAnswer : null,
+    correctAnswer,
+    explanation: String(item.explanation || '').trim() || '该题用于帮助理解非遗基础知识。',
+    sourceType,
+    sourceRef: String(item.sourceRef || '').trim() || null,
+    status,
+  };
+}
+
+const CHALLENGE_TOTAL_QUESTIONS = 10;
+const CHALLENGE_FAST_AI_TIMEOUT_MS = 1600;
+
+function shuffleArray(arr) {
+  return [...arr].sort(() => Math.random() - 0.5);
+}
+
+function buildQuestionOptions(question) {
+  const options = {};
+  const entries = [
+    ['A', question.optionA],
+    ['B', question.optionB],
+    ['C', question.optionC],
+    ['D', question.optionD],
+    ['E', question.optionE],
+    ['F', question.optionF],
+  ];
+
+  entries.forEach(([key, value]) => {
+    if (String(value || '').trim()) {
+      options[key] = String(value).trim();
+    }
+  });
+
+  if (question.questionType === 'judge') {
+    if (!options.A) options.A = '正确';
+    if (!options.B) options.B = '错误';
+  }
+
+  return options;
+}
+
+function normalizeSelectionByType(value, questionType) {
+  if (questionType === 'multiple') {
+    const raw = Array.isArray(value) ? value.join('') : String(value || '');
+    const letters = Array.from(raw.toUpperCase().replace(/[^A-F]/g, ''));
+    if (!letters.length) return null;
+    return [...new Set(letters)].sort().join('');
+  }
+
+  return normalizeAnswerByType(value, questionType);
+}
+
+function looksLikeGarbledQuestion(text) {
+  const value = String(text || '').trim();
+  if (!value) return false;
+
+  const hasChinese = /[\u4e00-\u9fa5]/.test(value);
+  const hasLatinOrDigit = /[A-Za-z0-9]/.test(value);
+  if (hasChinese || hasLatinOrDigit) return false;
+
+  const questionMarkOnly = /^[?？\s]+$/.test(value);
+  const hasReplacement = value.includes('�');
+  return questionMarkOnly || hasReplacement;
+}
+
+async function fetchQuizQuestionsByTypeWithFallback({
+  questionType,
+  categoryId,
+  difficulty,
+  limit,
+  excludeIds = [],
+}) {
+  const queries = [
+    // 优先：当前分类 + 当前难度
+    { categoryId, difficulty, questionType },
+    // 回退：当前分类 + 任意难度
+    { categoryId, questionType },
+    // 回退：任意分类 + 当前难度
+    { difficulty, questionType },
+    // 最后：任意分类 + 任意难度
+    { questionType },
+  ];
+
+  const collected = [];
+  const usedIds = new Set(excludeIds);
+
+  for (const q of queries) {
+    const need = limit - collected.length;
+    if (need <= 0) break;
+
+    const where = {
+      status: 'published',
+      ...q,
+      ...(usedIds.size ? { id: { [Op.notIn]: [...usedIds] } } : {}),
+    };
+
+    const rows = await HeritageQuizQuestion.findAll({
+      where,
+      order: sequelize.literal('RAND()'),
+      limit: need,
+    });
+
+    rows.forEach((row) => {
+      if (!usedIds.has(row.id)) {
+        usedIds.add(row.id);
+        collected.push(row);
+      }
+    });
+  }
+
+  return collected;
+}
+
+async function fetchQuizQuestionsByTypeAndSourceWithFallback({
+  questionType,
+  sourceType,
+  categoryId,
+  difficulty,
+  limit,
+  excludeIds = [],
+}) {
+  const queries = [
+    { categoryId, difficulty, questionType, sourceType },
+    { categoryId, questionType, sourceType },
+    { difficulty, questionType, sourceType },
+    { questionType, sourceType },
+  ];
+
+  const collected = [];
+  const usedIds = new Set(excludeIds);
+
+  for (const q of queries) {
+    const need = limit - collected.length;
+    if (need <= 0) break;
+
+    const where = {
+      status: 'published',
+      ...q,
+      ...(usedIds.size ? { id: { [Op.notIn]: [...usedIds] } } : {}),
+    };
+
+    const rows = await HeritageQuizQuestion.findAll({
+      where,
+      order: sequelize.literal('RAND()'),
+      limit: need,
+    });
+
+    rows.forEach((row) => {
+      if (!usedIds.has(row.id)) {
+        usedIds.add(row.id);
+        collected.push(row);
+      }
+    });
+  }
+
+  return collected;
+}
+
+async function fetchBankQuestionsWithFallback({
+  categoryId,
+  difficulty,
+  limit,
+  excludeIds = [],
+}) {
+  const queries = [
+    { categoryId, difficulty, sourceType: { [Op.in]: ['competition', 'official'] } },
+    { categoryId, sourceType: { [Op.in]: ['competition', 'official'] } },
+    { difficulty, sourceType: { [Op.in]: ['competition', 'official'] } },
+    { sourceType: { [Op.in]: ['competition', 'official'] } },
+  ];
+
+  const collected = [];
+  const usedIds = new Set(excludeIds);
+
+  for (const q of queries) {
+    const need = limit - collected.length;
+    if (need <= 0) break;
+
+    const where = {
+      status: 'published',
+      ...q,
+      ...(usedIds.size ? { id: { [Op.notIn]: [...usedIds] } } : {}),
+    };
+
+    const rows = await HeritageQuizQuestion.findAll({
+      where,
+      order: sequelize.literal('RAND()'),
+      limit: need,
+    });
+
+    rows.forEach((row) => {
+      if (!usedIds.has(row.id)) {
+        usedIds.add(row.id);
+        collected.push(row);
+      }
+    });
+  }
+
+  return collected;
+}
+
+async function fetchAiQuestionsWithFallback({
+  categoryId,
+  difficulty,
+  limit,
+  excludeIds = [],
+}) {
+  const queries = [
+    { categoryId, difficulty, sourceType: 'ai' },
+    { categoryId, sourceType: 'ai' },
+    { difficulty, sourceType: 'ai' },
+    { sourceType: 'ai' },
+  ];
+
+  const collected = [];
+  const usedIds = new Set(excludeIds);
+
+  for (const q of queries) {
+    const need = limit - collected.length;
+    if (need <= 0) break;
+
+    const where = {
+      status: 'published',
+      ...q,
+      ...(usedIds.size ? { id: { [Op.notIn]: [...usedIds] } } : {}),
+    };
+
+    const rows = await HeritageQuizQuestion.findAll({
+      where,
+      order: sequelize.literal('RAND()'),
+      limit: need,
+    });
+
+    rows.forEach((row) => {
+      if (!usedIds.has(row.id)) {
+        usedIds.add(row.id);
+        collected.push(row);
+      }
+    });
+  }
+
+  return collected;
+}
+
+// 自由问答：题目由用户输入，答案由通义千问实时生成
+router.post('/ask-heritage', authenticate, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const rate = checkUserRateLimit(qaRateBuckets, userId, QA_RATE_LIMIT_WINDOW_MS, QA_RATE_LIMIT_MAX);
+    if (!rate.allowed) {
+      return res.status(429).json({
+        success: false,
+        message: '提问过于频繁，请稍后再试',
+      });
+    }
+
+    const question = String(req.body?.question || '').trim();
+    if (!question) {
+      return res.status(400).json({
+        success: false,
+        message: '问题不能为空',
+      });
+    }
+
+    if (looksLikeGarbledQuestion(question)) {
+      return res.status(400).json({
+        success: false,
+        message: '检测到问题内容疑似乱码，请切换输入法或浏览器后重新输入',
+      });
+    }
+
+    const category = getCategoryMeta(req.body?.categoryId, req.body?.categoryName);
+    const qaResult = await generateHeritageQaAnswer({
+      categoryId: category.id,
+      categoryName: category.name,
+      question,
+    });
+
+    const saved = await HeritageQaMessage.create({
+      userId,
+      categoryId: category.id,
+      categoryName: category.name,
+      question,
+      answer: qaResult.answer,
+      promptVersion: qaResult.promptVersion,
+      model: qaResult.model,
+      provider: qaResult.provider,
+      latencyMs: qaResult.latencyMs,
+    });
+
+    const historyLimit = Math.max(1, Math.min(30, Number(req.body?.historyLimit) || 10));
+    const historyRows = await HeritageQaMessage.findAll({
+      where: {
+        userId,
+        categoryId: category.id,
+      },
+      order: [['createdAt', 'DESC']],
+      limit: historyLimit,
+    });
+
+    const history = historyRows
+      .map((row) => ({
+        id: row.id,
+        question: row.question,
+        answer: row.answer,
+        categoryId: row.categoryId,
+        categoryName: row.categoryName,
+        createdAt: row.createdAt,
+        provider: row.provider,
+        model: row.model,
+      }))
+      .reverse();
+
+    return res.json({
+      success: true,
+      message: '问答完成',
+      data: {
+        message: {
+          id: saved.id,
+          question: saved.question,
+          answer: saved.answer,
+          categoryId: saved.categoryId,
+          categoryName: saved.categoryName,
+          provider: saved.provider,
+          model: saved.model,
+          promptVersion: saved.promptVersion,
+          latencyMs: saved.latencyMs,
+          createdAt: saved.createdAt,
+        },
+        history,
+      },
+    });
+  } catch (error) {
+    console.error('❌ [Heritage QA] 接口失败:', error);
+    return res.status(500).json({
+      success: false,
+      message: '自由问答失败，请稍后重试',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+router.get('/heritage-qa-history', authenticate, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const category = getCategoryMeta(req.query?.categoryId, req.query?.categoryName);
+    const limit = Math.max(1, Math.min(50, Number(req.query?.limit) || 20));
+
+    const where = { userId };
+    if (req.query?.categoryId) {
+      where.categoryId = category.id;
+    }
+
+    const rows = await HeritageQaMessage.findAll({
+      where,
+      order: [['createdAt', 'DESC']],
+      limit,
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        categoryId: req.query?.categoryId ? category.id : null,
+        categoryName: req.query?.categoryId ? category.name : null,
+        list: rows.map((row) => ({
+          id: row.id,
+          question: row.question,
+          answer: row.answer,
+          categoryId: row.categoryId,
+          categoryName: row.categoryName,
+          createdAt: row.createdAt,
+        })),
+      },
+    });
+  } catch (error) {
+    console.error('❌ [Heritage QA] 获取历史失败:', error);
+    return res.status(500).json({
+      success: false,
+      message: '获取问答历史失败',
+    });
+  }
+});
+
+// 闯关开始：固定下发 10 道题，作答前不返回答案
+router.get('/quiz/challenge/start', authenticate, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const category = getCategoryMeta(req.query?.categoryId, req.query?.categoryName);
+    const difficulty = ['easy', 'medium', 'hard'].includes(req.query?.difficulty)
+      ? req.query?.difficulty
+      : 'medium';
+    const challengeCount = CHALLENGE_TOTAL_QUESTIONS;
+
+    const bankRows = await fetchBankQuestionsWithFallback({
+      categoryId: category.id,
+      difficulty,
+      limit: challengeCount,
+      excludeIds: [],
+    });
+
+    const selectedBankRows = bankRows.slice(0, challengeCount);
+    const needAiCount = Math.max(0, challengeCount - selectedBankRows.length);
+
+    let aiRows = [];
+    if (needAiCount > 0) {
+      aiRows = await fetchAiQuestionsWithFallback({
+        categoryId: category.id,
+        difficulty,
+        limit: needAiCount,
+        excludeIds: selectedBankRows.map((q) => q.id),
+      });
+    }
+
+    if (aiRows.length < needAiCount) {
+      const missingAi = needAiCount - aiRows.length;
+      const generated = await generateAiQuizQuestions({
+        categoryId: category.id,
+        categoryName: category.name,
+        count: missingAi,
+        difficulty,
+        timeoutMs: CHALLENGE_FAST_AI_TIMEOUT_MS,
+      });
+
+      if (Array.isArray(generated.questions) && generated.questions.length > 0) {
+        const createdRows = await HeritageQuizQuestion.bulkCreate(generated.questions);
+        aiRows = aiRows.concat(createdRows.slice(0, missingAi));
+      }
+    }
+
+    let publishedQuestions = [
+      ...selectedBankRows,
+      ...aiRows.slice(0, needAiCount),
+    ];
+
+    if (publishedQuestions.length < challengeCount) {
+      const needCount = challengeCount - publishedQuestions.length;
+      const existingIds = publishedQuestions.map((q) => q.id);
+
+      const extraRows = await HeritageQuizQuestion.findAll({
+        where: {
+          status: 'published',
+          ...(existingIds.length ? { id: { [Op.notIn]: existingIds } } : {}),
+        },
+        order: sequelize.literal('RAND()'),
+        limit: needCount,
+      });
+
+      publishedQuestions = publishedQuestions.concat(extraRows);
+    }
+
+    if (publishedQuestions.length < challengeCount) {
+      return res.status(503).json({
+        success: false,
+        message: '当前题库不足，暂时无法开始闯关，请稍后重试',
+      });
+    }
+
+    const questions = shuffleArray(publishedQuestions).slice(0, challengeCount);
+    const session = await HeritageQuizSession.create({
+      userId,
+      categoryId: category.id,
+      categoryName: category.name,
+      difficulty,
+      totalQuestions: challengeCount,
+      answeredQuestions: 0,
+      status: 'in_progress',
+    });
+
+    await HeritageQuizSessionAnswer.bulkCreate(
+      questions.map((item) => ({
+        sessionId: session.id,
+        questionId: item.id,
+      }))
+    );
+
+    return res.json({
+      success: true,
+      message: '闯关已开始',
+      data: {
+        sessionId: session.id,
+        totalQuestions: challengeCount,
+        categoryId: category.id,
+        categoryName: category.name,
+        difficulty,
+        questions: questions.map((item, idx) => ({
+          number: idx + 1,
+          questionId: item.id,
+          questionType: item.questionType,
+          sourceType: item.sourceType,
+          stem: item.stem,
+          options: buildQuestionOptions(item),
+        })),
+      },
+    });
+  } catch (error) {
+    console.error('❌ [Heritage Quiz] 开始闯关失败:', error);
+    return res.status(500).json({
+      success: false,
+      message: '开始闯关失败，请稍后重试',
+    });
+  }
+});
+
+// 闯关提交：提交后统一展示正确答案与解析
+router.post('/quiz/challenge/submit', authenticate, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const rate = checkUserRateLimit(
+      quizSubmitRateBuckets,
+      userId,
+      QUIZ_SUBMIT_RATE_LIMIT_WINDOW_MS,
+      QUIZ_SUBMIT_RATE_LIMIT_MAX
+    );
+    if (!rate.allowed) {
+      return res.status(429).json({
+        success: false,
+        message: '提交过于频繁，请稍后重试',
+      });
+    }
+
+    const sessionId = Number(req.body?.sessionId);
+    const answers = Array.isArray(req.body?.answers) ? req.body.answers : [];
+    if (!sessionId) {
+      return res.status(400).json({
+        success: false,
+        message: '提交参数错误，sessionId 不能为空',
+      });
+    }
+
+    const session = await HeritageQuizSession.findOne({
+      where: {
+        id: sessionId,
+        userId,
+      },
+    });
+
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        message: '闯关会话不存在',
+      });
+    }
+
+    if (session.status === 'completed') {
+      return res.status(400).json({
+        success: false,
+        message: '该闯关已提交，请重新开始',
+      });
+    }
+
+    if (answers.length !== session.totalQuestions) {
+      return res.status(400).json({
+        success: false,
+        message: `提交参数错误，必须一次提交 ${session.totalQuestions} 道题答案`,
+      });
+    }
+
+    const sessionAnswerRows = await HeritageQuizSessionAnswer.findAll({
+      where: { sessionId: session.id },
+      include: [
+        {
+          model: HeritageQuizQuestion,
+          as: 'question',
+        },
+      ],
+      order: [['id', 'ASC']],
+    });
+
+    if (sessionAnswerRows.length !== session.totalQuestions) {
+      return res.status(400).json({
+        success: false,
+        message: '当前会话题目异常，请重新开始闯关',
+      });
+    }
+
+    const answerMap = new Map();
+    answers.forEach((item) => {
+      const qid = Number(item.questionId);
+      const selectedRaw = item.selectedOptions ?? item.selectedOption;
+      if (qid && selectedRaw !== undefined && selectedRaw !== null) {
+        answerMap.set(qid, selectedRaw);
+      }
+    });
+
+    let correctCount = 0;
+    const detail = [];
+    for (const row of sessionAnswerRows) {
+      const question = row.question;
+      const selectedRaw = answerMap.get(row.questionId);
+      const selectedOption = normalizeSelectionByType(selectedRaw, question.questionType);
+      const correctAnswer = normalizeAnswerByType(
+        question.correctAnswer || question.correctOption,
+        question.questionType
+      );
+      const isCorrect = selectedOption ? selectedOption === correctAnswer : false;
+
+      await row.update({
+        selectedOption,
+        isCorrect,
+      });
+
+      if (isCorrect) {
+        correctCount += 1;
+      }
+
+      detail.push({
+        questionId: question.id,
+        questionType: question.questionType,
+        sourceType: question.sourceType,
+        stem: question.stem,
+        options: buildQuestionOptions(question),
+        selectedOption,
+        correctOption: question.correctOption,
+        correctAnswer,
+        isCorrect,
+        explanation: question.explanation,
+      });
+    }
+
+    const score = Math.round((correctCount / session.totalQuestions) * 100);
+    await session.update({
+      answeredQuestions: session.totalQuestions,
+      score,
+      status: 'completed',
+      completedAt: new Date(),
+    });
+
+    return res.json({
+      success: true,
+      message: '闯关提交成功',
+      data: {
+        sessionId: session.id,
+        categoryId: session.categoryId,
+        categoryName: session.categoryName,
+        totalQuestions: session.totalQuestions,
+        correctCount,
+        score,
+        answers: detail,
+      },
+    });
+  } catch (error) {
+    console.error('❌ [Heritage Quiz] 提交失败:', error);
+    return res.status(500).json({
+      success: false,
+      message: '闯关提交失败，请稍后重试',
+    });
+  }
+});
+
+router.get('/quiz/challenge/history', authenticate, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const limit = Math.max(1, Math.min(30, Number(req.query?.limit) || 10));
+    const rows = await HeritageQuizSession.findAll({
+      where: {
+        userId,
+        status: 'completed',
+      },
+      order: [['createdAt', 'DESC']],
+      limit,
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        list: rows.map((row) => ({
+          sessionId: row.id,
+          categoryId: row.categoryId,
+          categoryName: row.categoryName,
+          difficulty: row.difficulty,
+          score: row.score,
+          completedAt: row.completedAt,
+          createdAt: row.createdAt,
+        })),
+      },
+    });
+  } catch (error) {
+    console.error('❌ [Heritage Quiz] 历史查询失败:', error);
+    return res.status(500).json({
+      success: false,
+      message: '获取闯关历史失败',
+    });
+  }
+});
+
+// 题库批量生成（AI）
+router.post('/quiz/questions/import-ai', authenticate, async (req, res) => {
+  try {
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: '仅管理员可导入题库',
+      });
+    }
+
+    const category = getCategoryMeta(req.body?.categoryId, req.body?.categoryName);
+    const difficulty = ['easy', 'medium', 'hard'].includes(req.body?.difficulty)
+      ? req.body?.difficulty
+      : 'medium';
+    const count = Math.max(1, Math.min(50, Number(req.body?.count) || 20));
+
+    const generated = await generateAiQuizQuestions({
+      categoryId: category.id,
+      categoryName: category.name,
+      count,
+      difficulty,
+    });
+
+    const createdRows = await HeritageQuizQuestion.bulkCreate(generated.questions);
+    return res.json({
+      success: true,
+      message: 'AI 题库导入成功',
+      data: {
+        count: createdRows.length,
+        provider: generated.provider,
+        model: generated.model,
+        categoryId: category.id,
+        categoryName: category.name,
+        difficulty,
+      },
+    });
+  } catch (error) {
+    console.error('❌ [Heritage Quiz] AI 导题失败:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'AI 导题失败',
+    });
+  }
+});
+
+// 题库导入（官方资料 / 公开竞赛题）
+router.post('/quiz/questions/import-official', authenticate, async (req, res) => {
+  try {
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: '仅管理员可导入题库',
+      });
+    }
+
+    const sourceType = req.body?.sourceType === 'competition' ? 'competition' : 'official';
+    const rows = Array.isArray(req.body?.questions) ? req.body.questions : [];
+    if (!rows.length) {
+      return res.status(400).json({
+        success: false,
+        message: 'questions 不能为空',
+      });
+    }
+
+    const validRows = rows
+      .map((item) => validateQuestionPayload({
+        ...item,
+        sourceType,
+      }))
+      .filter(Boolean);
+
+    if (!validRows.length) {
+      return res.status(400).json({
+        success: false,
+        message: '无有效题目可导入',
+      });
+    }
+
+    const createdRows = await HeritageQuizQuestion.bulkCreate(validRows);
+    return res.json({
+      success: true,
+      message: '题库导入成功',
+      data: {
+        sourceType,
+        count: createdRows.length,
+      },
+    });
+  } catch (error) {
+    console.error('❌ [Heritage Quiz] 官方/竞赛导题失败:', error);
+    return res.status(500).json({
+      success: false,
+      message: '导入题库失败',
+    });
+  }
+});
+
 // 获取数字焕新预设产品列表（供前端选择产品底图，并说明引用资源目录）
 const PRODUCT_TEMPLATE_LIST = [
   { type: 'T恤', name: 'T恤', file: 'tshirt.png' },
@@ -579,6 +1485,17 @@ router.post('/generate-product', authenticate, async (req, res) => {
     const normalizedProductType = String(productType || '').trim() || '其他';
     const category = (normalizedProductType && PRODUCT_CONFIGS[normalizedProductType]) ? normalizedProductType : '其他';
 
+    console.log('🎯 [GenerateProduct] 收到请求:', {
+      userId: req.user?.id,
+      productType: normalizedProductType,
+      resolvedCategory: category,
+      hasStylePrompt: Boolean(String(stylePrompt || '').trim()),
+      descriptionLength: String(description || '').trim().length,
+      hasHeritageHint: Boolean(String(heritageHint || '').trim()),
+      hasExtraPrompt: Boolean(String(extraPrompt || '').trim()),
+      hasCustomConfig: Boolean(config),
+    });
+
     // 选择样机底图
     let templatePath = getProductTemplatePath(category);
     if (!templatePath) {
@@ -630,16 +1547,27 @@ router.post('/generate-product', authenticate, async (req, res) => {
       }
     }
 
-    const aiEnhanced = await enhanceImageWithQwen({
-      baseImagePath: templatePath,
-      baseImageUrl: templatePublicUrl,
+    const hasAiApiKey = Boolean(process.env.QWEN_API_KEY || process.env.DASHSCOPE_API_KEY);
+    console.log('🤖 [GenerateProduct] 开始调用 AI 图像生成:', {
+      userId: req.user?.id,
+      hasAiApiKey,
+      requestedProductType: normalizedProductType,
+      resolvedCategory: category,
+    });
+
+    const aiEnhanced = await generateThenEnhanceWithQwen({
       productType: category,
       stylePrompt,
       aiPrompt: finalAiPrompt,
-      config: customConfig,
     });
 
     if (!aiEnhanced || !aiEnhanced.buffer) {
+      console.warn('⚠️ [GenerateProduct] AI 图像生成未返回有效结果:', {
+        userId: req.user?.id,
+        hasAiApiKey,
+        requestedProductType: normalizedProductType,
+        resolvedCategory: category,
+      });
       return res.status(503).json({
         success: false,
         message: '当前未配置或暂不可用的 AI 图像生成能力（请检查 QWEN_API_KEY / DASHSCOPE_API_KEY）',
@@ -649,6 +1577,14 @@ router.post('/generate-product', authenticate, async (req, res) => {
     const aiFilename = `transform-gen-${Date.now()}-${Math.round(Math.random() * 1E9)}.png`;
     const aiFilePath = path.join(artworksUploadDir, aiFilename);
     await fs.promises.writeFile(aiFilePath, aiEnhanced.buffer);
+
+    console.log('✅ [GenerateProduct] AI 图像生成成功:', {
+      userId: req.user?.id,
+      provider: aiEnhanced.provider || 'unknown',
+      model: aiEnhanced.model || 'unknown',
+      triedModels: aiEnhanced.triedModels || [aiEnhanced.model],
+      savedFile: aiFilename,
+    });
 
     return res.json({
       success: true,

@@ -4,9 +4,13 @@ const { STORAGE_KEYS } = require('../../utils/constants');
 const { shouldHideFromMiniProgram } = require('../../utils/filters');
 const FAVORITE_KEY = STORAGE_KEYS.FAVORITE_ARTWORK_IDS;
 
+function normalizeId(value) {
+  return String(value || '');
+}
+
 function getFavoriteIds() {
   const value = wx.getStorageSync(FAVORITE_KEY);
-  return Array.isArray(value) ? value : [];
+  return Array.isArray(value) ? value.map(normalizeId).filter(Boolean) : [];
 }
 
 Page({
@@ -35,10 +39,10 @@ Page({
 
   onShow() {
     if (this.data.artworks.length) {
-      const favoriteIds = getFavoriteIds();
+      const favoriteIdSet = new Set(getFavoriteIds());
       const artworks = this.data.artworks.map(item => ({
         ...item,
-        isFavorited: favoriteIds.includes(item.id)
+        isFavorited: favoriteIdSet.has(normalizeId(item.id))
       }));
       this.setData({ artworks });
     }
@@ -66,7 +70,7 @@ Page({
     this.setData({ loading: true });
 
     try {
-      const favoriteIds = getFavoriteIds();
+      const favoriteIdSet = new Set(getFavoriteIds());
 
       const res = await api.get('/artworks', {
         page: this.data.page,
@@ -86,13 +90,13 @@ Page({
       // 先把接口返回的数据全部展示出来：不做 mock、不做标签过滤
       const newArtworks = (Array.isArray(rawArtworks) ? rawArtworks : [])
         .map(item => {
-          const normalizedId = item?.id ?? item?._id ?? item?.artworkId ?? '';
+          const normalizedId = normalizeId(item?.id ?? item?._id ?? item?.artworkId);
           const imageUrl = api.getImageUrl(item?.imageUrl || item?.coverUrl || item?.cover || '');
           return {
             ...item,
             id: normalizedId,
             imageUrl,
-            isFavorited: favoriteIds.includes(normalizedId)
+            isFavorited: favoriteIdSet.has(normalizedId)
           };
         });
 
@@ -143,18 +147,17 @@ Page({
   },
 
   toggleFavorite(e) {
-    const artworkId = e.currentTarget.dataset.id;
+    const artworkId = normalizeId(e.currentTarget.dataset.id);
     const artworks = [...this.data.artworks];
-    const index = artworks.findIndex(item => String(item.id) === String(artworkId));
+    const index = artworks.findIndex(item => normalizeId(item.id) === artworkId);
     if (index < 0) return;
 
     const favoriteIds = getFavoriteIds();
-    const idAsString = String(artworkId);
-    const exists = favoriteIds.some(id => String(id) === idAsString);
+    const exists = favoriteIds.includes(artworkId);
 
     let nextIds;
     if (exists) {
-      nextIds = favoriteIds.filter(id => String(id) !== idAsString);
+      nextIds = favoriteIds.filter(id => id !== artworkId);
     } else {
       nextIds = [artworkId, ...favoriteIds];
     }

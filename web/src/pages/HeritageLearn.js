@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Button, Card, Modal } from "antd";
+import { Button, Card, Checkbox, Empty, Input, message, Modal, Radio, Select, Tag } from "antd";
 import { useNavigate } from "react-router-dom";
 import {
   BookOpenText,
@@ -17,12 +17,16 @@ import {
   PersonStanding,
   Play,
   ScrollText,
+  Send,
   Theater,
+  Trophy,
   Wrench,
   Palette,
 } from "lucide-react";
 import "./HeritageLearn.css";
 import { LucideIcon } from "../components/icons/lucide";
+import api from "../utils/api";
+import { useAuthStore } from "../store/authStore";
 
 // 教程资源数据结构：{ title, type: 'video'|'article', url, source, description }
 const TUTORIAL_RESOURCES = {
@@ -319,13 +323,234 @@ const LEARNING_PATH = [
 
 const HeritageLearn = () => {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [tutorialModalVisible, setTutorialModalVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [qaModalVisible, setQaModalVisible] = useState(false);
+  const [qaEntryMode, setQaEntryMode] = useState("qa");
+  const [qaCategoryId, setQaCategoryId] = useState(HERITAGE_CATEGORIES[0].id);
+  const [qaQuestion, setQaQuestion] = useState("");
+  const [qaSubmitting, setQaSubmitting] = useState(false);
+  const [qaHistoryLoading, setQaHistoryLoading] = useState(false);
+  const [qaHistory, setQaHistory] = useState([]);
+  const [quizLoading, setQuizLoading] = useState(false);
+  const [quizSubmitting, setQuizSubmitting] = useState(false);
+  const [quizSessionId, setQuizSessionId] = useState(null);
+  const [quizQuestions, setQuizQuestions] = useState([]);
+  const [quizAnswers, setQuizAnswers] = useState({});
+  const [quizResult, setQuizResult] = useState(null);
 
   const handleCardClick = (item) => {
     setSelectedItem(item);
     setTutorialModalVisible(true);
   };
+
+  const currentCategory =
+    HERITAGE_CATEGORIES.find((item) => item.id === qaCategoryId) ||
+    HERITAGE_CATEGORIES[0];
+
+  const categoryOptions = HERITAGE_CATEGORIES.map((item) => ({
+    label: item.name,
+    value: item.id,
+  }));
+
+  const requireLoginBeforeAction = () => {
+    if (user) return false;
+    message.warning("请先登录后使用问答与闯关");
+    navigate(`/login?redirect=${encodeURIComponent("/heritage-learn")}`);
+    return true;
+  };
+
+  const resetQuizState = () => {
+    setQuizSessionId(null);
+    setQuizQuestions([]);
+    setQuizAnswers({});
+    setQuizResult(null);
+  };
+
+  const loadQaHistory = async (categoryId = qaCategoryId) => {
+    if (requireLoginBeforeAction()) return;
+    setQaHistoryLoading(true);
+    try {
+      const res = await api.get("/ai/heritage-qa-history", {
+        params: {
+          categoryId,
+          limit: 20,
+        },
+      });
+      if (res.data?.success) {
+        setQaHistory(res.data?.data?.list || []);
+      }
+    } catch (error) {
+      message.error("加载问答历史失败");
+    } finally {
+      setQaHistoryLoading(false);
+    }
+  };
+
+  const openQaModal = async (mode = "qa") => {
+    if (requireLoginBeforeAction()) return;
+    setQaEntryMode(mode);
+    setQaModalVisible(true);
+    if (mode === "qa") {
+      loadQaHistory(qaCategoryId);
+      return;
+    }
+    resetQuizState();
+  };
+
+  const handleAskQuestion = async () => {
+    const question = qaQuestion.trim();
+    if (!question) {
+      message.warning("请输入你的问题");
+      return;
+    }
+
+    setQaSubmitting(true);
+    try {
+      const res = await api.post("/ai/ask-heritage", {
+        categoryId: currentCategory.id,
+        categoryName: currentCategory.name,
+        question,
+        historyLimit: 20,
+      });
+      if (res.data?.success) {
+        setQaQuestion("");
+        setQaHistory(res.data?.data?.history || []);
+        message.success("已生成回答");
+      } else {
+        message.error(res.data?.message || "提问失败");
+      }
+    } catch (error) {
+      message.error(error.response?.data?.message || "提问失败，请稍后重试");
+    } finally {
+      setQaSubmitting(false);
+    }
+  };
+
+  const startQuizChallenge = async () => {
+    if (requireLoginBeforeAction()) return;
+    setQuizLoading(true);
+    try {
+      const res = await api.get("/ai/quiz/challenge/start", {
+        params: {
+          categoryId: currentCategory.id,
+          categoryName: currentCategory.name,
+          difficulty: "medium",
+        },
+      });
+      if (res.data?.success) {
+        const payload = res.data.data || {};
+        setQuizSessionId(payload.sessionId);
+        setQuizQuestions(payload.questions || []);
+        setQuizAnswers({});
+        setQuizResult(null);
+      } else {
+        message.error(res.data?.message || "开始闯关失败");
+      }
+    } catch (error) {
+      message.error(error.response?.data?.message || "开始闯关失败");
+    } finally {
+      setQuizLoading(false);
+    }
+  };
+
+  const handleSelectQuizOption = (questionId, selectedOption) => {
+    const text = Array.isArray(selectedOption)
+      ? [...new Set(selectedOption.map((item) => String(item).toUpperCase()))].sort().join("")
+      : String(selectedOption || "").toUpperCase().trim();
+
+    setQuizAnswers((prev) => ({
+      ...prev,
+      [questionId]: text,
+    }));
+  };
+
+  const normalizeQuestionType = (item) => {
+    const type = String(item?.questionType || "single").toLowerCase();
+    if (["single", "multiple", "judge"].includes(type)) return type;
+    return "single";
+  };
+
+  const isSelectionValidForType = (question, answer) => {
+    const type = normalizeQuestionType(question);
+    const text = String(answer || "").toUpperCase().trim();
+    const optionKeys = Object.keys(question.options || {});
+    if (!text) return false;
+
+    if (type === "multiple") {
+      const chars = [...new Set(text.replace(/[^A-F]/g, "").split(""))];
+      if (chars.length < 2) return false;
+      return chars.every((ch) => optionKeys.includes(ch));
+    }
+
+    if (text.length !== 1) return false;
+    return optionKeys.includes(text);
+  };
+
+  const getAnsweredCount = () =>
+    quizQuestions.filter((item) => isSelectionValidForType(item, quizAnswers[item.questionId])).length;
+
+  const formatAnswerByType = (questionType, answer) => {
+    const text = String(answer || "").toUpperCase().trim();
+    if (!text) return "未作答";
+    if (questionType === "judge") {
+      if (text === "A") return "正确";
+      if (text === "B") return "错误";
+    }
+    if (questionType === "multiple") {
+      return text.split("").join("、");
+    }
+    return text;
+  };
+
+  const submitQuizChallenge = async () => {
+    if (!quizSessionId || quizQuestions.length === 0) {
+      message.warning("请先开始闯关");
+      return;
+    }
+
+    const invalidQuestions = quizQuestions.filter(
+      (item) => !isSelectionValidForType(item, quizAnswers[item.questionId])
+    );
+    if (invalidQuestions.length > 0) {
+      const first = invalidQuestions[0];
+      const qType = normalizeQuestionType(first);
+      const tips =
+        qType === "multiple"
+          ? "多选题请至少选择2项"
+          : qType === "judge"
+            ? "判断题请选择“正确”或“错误”"
+            : "单选题请选择且仅选择1项";
+      message.warning(`第 ${first.number} 题未按格式作答：${tips}`);
+      return;
+    }
+
+    setQuizSubmitting(true);
+    try {
+      const res = await api.post("/ai/quiz/challenge/submit", {
+        sessionId: quizSessionId,
+        answers: quizQuestions.map((item) => ({
+          questionId: item.questionId,
+          selectedOption: String(quizAnswers[item.questionId] || "").toUpperCase(),
+        })),
+      });
+      if (res.data?.success) {
+        setQuizResult(res.data?.data || null);
+        message.success("闯关完成，已显示标准答案");
+      } else {
+        message.error(res.data?.message || "提交失败");
+      }
+    } catch (error) {
+      message.error(error.response?.data?.message || "提交失败，请稍后重试");
+    } finally {
+      setQuizSubmitting(false);
+    }
+  };
+
+  const canSubmitQuiz =
+    quizQuestions.length > 0 &&
+    quizQuestions.every((item) => isSelectionValidForType(item, quizAnswers[item.questionId]));
 
   const tutorials = selectedItem
     ? TUTORIAL_RESOURCES[selectedItem.name] || []
@@ -379,10 +604,28 @@ const HeritageLearn = () => {
       {/* 非遗十大分类 */}
       <section className="heritage-categories section-block">
         <div className="section-container">
-          <h2 className="section-title">
-            <LucideIcon icon={Crown} className="section-icon" />
-            非遗十大分类
-          </h2>
+          <div className="section-title-row">
+            <h2 className="section-title">
+              <LucideIcon icon={Crown} className="section-icon" />
+              非遗十大分类
+            </h2>
+            <div className="qa-entry-actions">
+              <Button
+                type="primary"
+                className="qa-entry-btn"
+                onClick={() => openQaModal("qa")}
+              >
+                非遗问答
+              </Button>
+              <Button
+                type="primary"
+                className="qa-entry-btn"
+                onClick={() => openQaModal("quiz")}
+              >
+                答题闯关
+              </Button>
+            </div>
+          </div>
           <div className="categories-grid">
             {HERITAGE_CATEGORIES.map((cat) => (
               <Card key={cat.id} className="category-card" hoverable>
@@ -454,6 +697,214 @@ const HeritageLearn = () => {
       </section>
 
       {/* 教程弹窗 */}
+      <Modal
+        title={qaEntryMode === "quiz" ? "答题闯关" : "非遗问答"}
+        open={qaModalVisible}
+        onCancel={() => setQaModalVisible(false)}
+        footer={null}
+        width={980}
+        className="heritage-qa-modal"
+        destroyOnClose
+      >
+        <div className="qa-hub-content">
+          <div className="qa-hub-top">
+            <div className="qa-entry-mode-indicator">
+              {qaEntryMode === "quiz" ? "答题闯关（10题）" : "AI自由问答"}
+            </div>
+            <Select
+              value={qaCategoryId}
+              options={categoryOptions}
+              onChange={(value) => {
+                setQaCategoryId(value);
+                if (qaEntryMode === "qa") {
+                  loadQaHistory(value);
+                } else {
+                  resetQuizState();
+                }
+              }}
+              style={{ minWidth: 180 }}
+            />
+          </div>
+
+          {qaEntryMode === "qa" ? (
+            <div className="qa-mode-panel">
+              <div className="qa-input-wrap">
+                <Input.TextArea
+                  value={qaQuestion}
+                  onChange={(e) => setQaQuestion(e.target.value)}
+                  rows={3}
+                  maxLength={500}
+                  placeholder="输入你想问的非遗问题，例如：昆曲水磨腔的学习路径应该怎么安排？"
+                />
+                <div className="qa-input-actions">
+                  <Button
+                    type="primary"
+                    icon={<LucideIcon icon={Send} />}
+                    loading={qaSubmitting}
+                    onClick={handleAskQuestion}
+                  >
+                    发送问题
+                  </Button>
+                </div>
+              </div>
+
+              <div className="qa-history-wrap">
+                <div className="qa-history-title">历史对话</div>
+                {qaHistoryLoading ? (
+                  <p className="qa-loading-text">加载中...</p>
+                ) : qaHistory.length === 0 ? (
+                  <Empty description="暂无问答记录，先提一个问题吧" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                ) : (
+                  <div className="qa-message-list">
+                    {qaHistory.map((item) => (
+                      <div key={item.id} className="qa-message-item">
+                        <div className="qa-question">问：{item.question}</div>
+                        <div className="qa-answer">答：{item.answer}</div>
+                        <div className="qa-meta">
+                          <Tag>{item.categoryName}</Tag>
+                          <span>{new Date(item.createdAt).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="quiz-mode-panel">
+              {!quizSessionId && !quizResult ? (
+                <div className="quiz-start-box">
+                  <p>当前将按「{currentCategory.name}」生成并下发 10 道混合题（单选+多选+判断）。</p>
+                  <p>规则：必须全部答完后，才显示正确答案与解析。</p>
+                  <Button type="primary" loading={quizLoading} onClick={startQuizChallenge}>
+                    开始10题闯关
+                  </Button>
+                </div>
+              ) : null}
+
+              {quizSessionId && !quizResult ? (
+                <div className="quiz-questions-wrap">
+                  <div className="quiz-progress">
+                    已作答 {getAnsweredCount()} / {quizQuestions.length}
+                  </div>
+                  {quizQuestions.map((item) => (
+                    <div key={item.questionId} className="quiz-question-item">
+                      <div className="quiz-stem">
+                        {item.number}. {item.stem}
+                        <Tag className="quiz-type-tag" color={
+                          item.questionType === "multiple"
+                            ? "purple"
+                            : item.questionType === "judge"
+                              ? "geekblue"
+                              : "gold"
+                        }>
+                          {item.questionType === "multiple"
+                            ? "多选题"
+                            : item.questionType === "judge"
+                              ? "判断题"
+                              : "单选题"}
+                        </Tag>
+                      </div>
+                      {item.questionType === "multiple" ? (
+                        <Checkbox.Group
+                          value={String(quizAnswers[item.questionId] || "").split("").filter(Boolean)}
+                          onChange={(vals) => handleSelectQuizOption(item.questionId, vals)}
+                        >
+                          <div className="quiz-options">
+                            {Object.entries(item.options || {}).map(([optionKey, optionText]) => (
+                              <Checkbox key={optionKey} value={optionKey}>
+                                {optionKey}. {optionText}
+                              </Checkbox>
+                            ))}
+                          </div>
+                        </Checkbox.Group>
+                      ) : item.questionType === "judge" ? (
+                        <div className="quiz-judge-actions">
+                          <Button
+                            className={`quiz-judge-btn ${quizAnswers[item.questionId] === "A" ? "active" : ""}`}
+                            type={quizAnswers[item.questionId] === "A" ? "primary" : "default"}
+                            onClick={() => handleSelectQuizOption(item.questionId, "A")}
+                          >
+                            正确
+                          </Button>
+                          <Button
+                            className={`quiz-judge-btn ${quizAnswers[item.questionId] === "B" ? "active" : ""}`}
+                            type={quizAnswers[item.questionId] === "B" ? "primary" : "default"}
+                            onClick={() => handleSelectQuizOption(item.questionId, "B")}
+                          >
+                            错误
+                          </Button>
+                        </div>
+                      ) : (
+                        <Radio.Group
+                          value={quizAnswers[item.questionId]}
+                          onChange={(e) => handleSelectQuizOption(item.questionId, e.target.value)}
+                        >
+                          <div className="quiz-options">
+                            {Object.entries(item.options || {}).map(([optionKey, optionText]) => (
+                              <Radio key={optionKey} value={optionKey}>
+                                {optionKey}. {optionText}
+                              </Radio>
+                            ))}
+                          </div>
+                        </Radio.Group>
+                      )}
+                    </div>
+                  ))}
+                  <div className="quiz-submit-row">
+                    <Button
+                      type="primary"
+                      loading={quizSubmitting}
+                      disabled={!canSubmitQuiz}
+                      onClick={submitQuizChallenge}
+                    >
+                      提交并查看正确答案
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
+              {quizResult ? (
+                <div className="quiz-result-wrap">
+                  <div className="quiz-score-box">
+                    <LucideIcon icon={Trophy} />
+                    <span>
+                      本次得分：{quizResult.score} 分（答对 {quizResult.correctCount} / {quizResult.totalQuestions || 10}）
+                    </span>
+                  </div>
+                  <div className="quiz-result-list">
+                    {(quizResult.answers || []).map((item, idx) => (
+                      <div key={item.questionId} className="quiz-result-item">
+                        <div className="quiz-stem">
+                          {idx + 1}. {item.stem}
+                        </div>
+                        <div className="quiz-result-line">
+                          你的答案：{formatAnswerByType(item.questionType, item.selectedOption)}
+                        </div>
+                        <div className="quiz-result-line">
+                          正确答案：{formatAnswerByType(item.questionType, item.correctAnswer || item.correctOption)}
+                        </div>
+                        <div className="quiz-result-line">解析：{item.explanation}</div>
+                        <Tag color={item.isCorrect ? "success" : "error"}>
+                          {item.isCorrect ? "正确" : "错误"}
+                        </Tag>
+                      </div>
+                    ))}
+                  </div>
+                  <Button
+                    onClick={() => {
+                      resetQuizState();
+                    }}
+                  >
+                    再来一轮
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+          )}
+        </div>
+      </Modal>
+
       <Modal
         title={
           selectedItem ? (

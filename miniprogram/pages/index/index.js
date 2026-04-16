@@ -44,7 +44,7 @@ Page({
       },
       {
         id: 'ai-learn',
-        title: 'AI学艺',
+        title: '学艺',
         desc: '上传作品，获得相似度与改进建议',
         imageUrl: `${WEB_IMAGES_BASE}/home/modules/2.png`,
         url: '/pages/ai-learn/ai-learn',

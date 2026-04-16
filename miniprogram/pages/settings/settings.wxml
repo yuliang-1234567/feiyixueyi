@@ -8,7 +8,6 @@
     <view class="setting-group">
       <view class="setting-item">
         <view class="setting-left">
-          <view class="icon-badge icon-badge--muted setting-badge">通</view>
           <text class="setting-text">消息通知</text>
         </view>
         <switch checked="{{settings.notifications}}" 
@@ -18,7 +17,6 @@
       </view>
       <view class="setting-item">
         <view class="setting-left">
-          <view class="icon-badge icon-badge--muted setting-badge">播</view>
           <text class="setting-text">自动播放</text>
         </view>
         <switch checked="{{settings.autoPlay}}" 
@@ -31,7 +29,6 @@
     <view class="setting-group">
       <view class="setting-item" bindtap="clearCache">
         <view class="setting-left">
-          <view class="icon-badge icon-badge--muted setting-badge">清</view>
           <text class="setting-text">清除缓存</text>
         </view>
         <text class="setting-arrow">></text>

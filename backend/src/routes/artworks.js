@@ -1,6 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 const { Op, Sequelize } = require('sequelize');
 const Artwork = require('../models/Artwork');
 const ArtworkLike = require('../models/ArtworkLike');
@@ -42,6 +43,42 @@ const upload = multer({
     }
   }
 });
+
+const saveArtworkImageFromUrl = async (imageUrl) => {
+  if (!imageUrl || typeof imageUrl !== 'string') {
+    return null;
+  }
+
+  const normalizedUrl = imageUrl.trim();
+  if (!normalizedUrl) {
+    return null;
+  }
+
+  let sourcePath = null;
+  try {
+    if (normalizedUrl.startsWith('/uploads/')) {
+      sourcePath = path.join(__dirname, '../..', normalizedUrl);
+    } else if (/^https?:\/\//i.test(normalizedUrl)) {
+      const parsedUrl = new URL(normalizedUrl);
+      if (parsedUrl.pathname.startsWith('/uploads/')) {
+        sourcePath = path.join(__dirname, '../..', parsedUrl.pathname);
+      }
+    }
+  } catch (error) {
+    console.warn('⚠️ [Artwork] 解析图片URL失败:', error.message);
+  }
+
+  if (!sourcePath || !fs.existsSync(sourcePath)) {
+    return null;
+  }
+
+  const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+  const targetFilename = 'artwork-' + uniqueSuffix + path.extname(sourcePath || '.png');
+  const targetPath = path.join(__dirname, '../../uploads/artworks', targetFilename);
+
+  await fs.promises.copyFile(sourcePath, targetPath);
+  return `/uploads/artworks/${targetFilename}`;
+};
 
 // 获取作品列表（公开）
 router.get('/', async (req, res) => {
@@ -326,12 +363,19 @@ router.get('/:id', async (req, res) => {
 // 创建作品
 router.post('/', authenticate, upload.single('image'), async (req, res) => {
   try {
-    const { title, description, category, tags, status = 'published' } = req.body;
+    const { title, description, category, tags, status = 'published', imageUrl } = req.body;
     
-    if (!req.file) {
+    let savedImageUrl = null;
+    if (req.file) {
+      savedImageUrl = `/uploads/artworks/${req.file.filename}`;
+    } else {
+      savedImageUrl = await saveArtworkImageFromUrl(imageUrl);
+    }
+
+    if (!savedImageUrl) {
       return res.status(400).json({
         success: false,
-        message: '请上传作品图片'
+        message: '请上传作品图片或提供可访问的 imageUrl'
       });
     }
 
@@ -339,7 +383,7 @@ router.post('/', authenticate, upload.single('image'), async (req, res) => {
     const artworkData = {
       title,
       description: description || '',
-      imageUrl: `/uploads/artworks/${req.file.filename}`,
+      imageUrl: savedImageUrl,
       category,
       authorId: req.user.id,
       aiSimilarity: null,

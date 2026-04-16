@@ -179,6 +179,130 @@ CREATE TABLE IF NOT EXISTS `views` (
   INDEX `idx_ip` (`ipAddress`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ---------- heritage qa + quiz tables ----------
+CREATE TABLE IF NOT EXISTS `heritage_qa_messages` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `userId` INT NOT NULL,
+  `categoryId` VARCHAR(50) NOT NULL DEFAULT 'craft',
+  `categoryName` VARCHAR(50) NOT NULL DEFAULT '传统技艺',
+  `question` TEXT NOT NULL,
+  `answer` TEXT NOT NULL,
+  `promptVersion` VARCHAR(20) NOT NULL DEFAULT 'v1',
+  `model` VARCHAR(80) DEFAULT NULL,
+  `provider` VARCHAR(40) NOT NULL DEFAULT 'qwen',
+  `latencyMs` INT DEFAULT NULL,
+  `createdAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  INDEX `idx_user_category_created` (`userId`, `categoryId`, `createdAt`),
+  INDEX `idx_created` (`createdAt`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `heritage_quiz_questions` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `categoryId` VARCHAR(50) NOT NULL DEFAULT 'craft',
+  `categoryName` VARCHAR(50) NOT NULL DEFAULT '传统技艺',
+  `difficulty` ENUM('easy', 'medium', 'hard') NOT NULL DEFAULT 'medium',
+  `questionType` ENUM('single', 'multiple', 'judge') NOT NULL DEFAULT 'single',
+  `stem` TEXT NOT NULL,
+  `optionA` VARCHAR(255) NOT NULL,
+  `optionB` VARCHAR(255) NOT NULL,
+  `optionC` VARCHAR(255) DEFAULT NULL,
+  `optionD` VARCHAR(255) DEFAULT NULL,
+  `optionE` VARCHAR(255) DEFAULT NULL,
+  `optionF` VARCHAR(255) DEFAULT NULL,
+  `correctOption` ENUM('A', 'B', 'C', 'D') DEFAULT NULL,
+  `correctAnswer` VARCHAR(20) NOT NULL DEFAULT 'A',
+  `explanation` TEXT DEFAULT NULL,
+  `sourceType` ENUM('ai', 'official', 'competition') NOT NULL DEFAULT 'ai',
+  `sourceRef` VARCHAR(500) DEFAULT NULL,
+  `status` ENUM('draft', 'published', 'archived') NOT NULL DEFAULT 'published',
+  `createdAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX `idx_status_category_difficulty` (`status`, `categoryId`, `difficulty`),
+  INDEX `idx_source_type` (`sourceType`),
+  INDEX `idx_created` (`createdAt`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `heritage_quiz_sessions` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `userId` INT NOT NULL,
+  `categoryId` VARCHAR(50) NOT NULL DEFAULT 'craft',
+  `categoryName` VARCHAR(50) NOT NULL DEFAULT '传统技艺',
+  `difficulty` ENUM('easy', 'medium', 'hard') NOT NULL DEFAULT 'medium',
+  `totalQuestions` INT NOT NULL DEFAULT 10,
+  `answeredQuestions` INT NOT NULL DEFAULT 0,
+  `score` INT DEFAULT NULL,
+  `status` ENUM('in_progress', 'completed', 'abandoned') NOT NULL DEFAULT 'in_progress',
+  `completedAt` DATETIME DEFAULT NULL,
+  `createdAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  INDEX `idx_user_created` (`userId`, `createdAt`),
+  INDEX `idx_status_created` (`status`, `createdAt`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `heritage_quiz_session_answers` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `sessionId` INT NOT NULL,
+  `questionId` INT NOT NULL,
+  `selectedOption` VARCHAR(20) DEFAULT NULL,
+  `isCorrect` TINYINT(1) DEFAULT NULL,
+  `createdAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`sessionId`) REFERENCES `heritage_quiz_sessions`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`questionId`) REFERENCES `heritage_quiz_questions`(`id`) ON DELETE CASCADE,
+  UNIQUE KEY `uniq_session_question` (`sessionId`, `questionId`),
+  INDEX `idx_question_id` (`questionId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------- heritage quiz compatibility upgrades ----------
+SET @sql_stmt = IF(
+  (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=@db_name AND TABLE_NAME='heritage_quiz_questions' AND COLUMN_NAME='questionType') = 0,
+  'ALTER TABLE `heritage_quiz_questions` ADD COLUMN `questionType` ENUM(''single'', ''multiple'', ''judge'') NOT NULL DEFAULT ''single'' AFTER `difficulty`',
+  'SELECT ''skip heritage_quiz_questions.questionType'' AS msg'
+);
+PREPARE stmt FROM @sql_stmt; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql_stmt = IF(
+  (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=@db_name AND TABLE_NAME='heritage_quiz_questions' AND COLUMN_NAME='optionE') = 0,
+  'ALTER TABLE `heritage_quiz_questions` ADD COLUMN `optionE` VARCHAR(255) NULL AFTER `optionD`',
+  'SELECT ''skip heritage_quiz_questions.optionE'' AS msg'
+);
+PREPARE stmt FROM @sql_stmt; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql_stmt = IF(
+  (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=@db_name AND TABLE_NAME='heritage_quiz_questions' AND COLUMN_NAME='optionF') = 0,
+  'ALTER TABLE `heritage_quiz_questions` ADD COLUMN `optionF` VARCHAR(255) NULL AFTER `optionE`',
+  'SELECT ''skip heritage_quiz_questions.optionF'' AS msg'
+);
+PREPARE stmt FROM @sql_stmt; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql_stmt = IF(
+  (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=@db_name AND TABLE_NAME='heritage_quiz_questions' AND COLUMN_NAME='correctAnswer') = 0,
+  'ALTER TABLE `heritage_quiz_questions` ADD COLUMN `correctAnswer` VARCHAR(20) NOT NULL DEFAULT ''A'' AFTER `correctOption`',
+  'SELECT ''skip heritage_quiz_questions.correctAnswer'' AS msg'
+);
+PREPARE stmt FROM @sql_stmt; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql_stmt = 'ALTER TABLE `heritage_quiz_questions` MODIFY COLUMN `optionC` VARCHAR(255) NULL';
+PREPARE stmt FROM @sql_stmt; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql_stmt = 'ALTER TABLE `heritage_quiz_questions` MODIFY COLUMN `optionD` VARCHAR(255) NULL';
+PREPARE stmt FROM @sql_stmt; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql_stmt = 'ALTER TABLE `heritage_quiz_questions` MODIFY COLUMN `correctOption` ENUM(''A'', ''B'', ''C'', ''D'') NULL';
+PREPARE stmt FROM @sql_stmt; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql_stmt = 'UPDATE `heritage_quiz_questions` SET `questionType` = ''single'' WHERE `questionType` IS NULL OR `questionType` = ''''';
+PREPARE stmt FROM @sql_stmt; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql_stmt = 'UPDATE `heritage_quiz_questions` SET `correctAnswer` = COALESCE(NULLIF(`correctAnswer`, ''''), `correctOption`, ''A'')';
+PREPARE stmt FROM @sql_stmt; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql_stmt = 'ALTER TABLE `heritage_quiz_session_answers` MODIFY COLUMN `selectedOption` VARCHAR(20) NULL';
+PREPARE stmt FROM @sql_stmt; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
 -- ---------- data backfill ----------
 UPDATE `artworks` a
 SET `likesCount` = (

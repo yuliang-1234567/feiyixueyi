@@ -22,14 +22,18 @@
   <!-- 数据统计 -->
   <view class="stats-section" wx:if="{{hasUserInfo}}">
     <view class="stat-card" bindtap="navigateToMyLearning">
-      <view class="icon-badge">学</view>
+      <view class="stat-icon-frame">
+        <image class="stat-icon" src="../../images/tar_icon/study_record.png" mode="aspectFit"></image>
+      </view>
       <view class="stat-content">
         <text class="stat-value">{{stats.learningRecords}}</text>
         <text class="stat-label">学习记录</text>
       </view>
     </view>
     <view class="stat-card" bindtap="navigateToMyLikes">
-      <view class="icon-badge icon-badge--gold">藏</view>
+      <view class="stat-icon-frame stat-icon-frame--gold">
+        <image class="stat-icon" src="../../images/tar_icon/collection.png" mode="aspectFit"></image>
+      </view>
       <view class="stat-content">
         <text class="stat-value">{{stats.likes}}</text>
         <text class="stat-label">收藏</text>
@@ -42,7 +46,9 @@
     <view class="menu-group">
       <view class="menu-item" bindtap="navigateToMyLearning">
         <view class="menu-left">
-          <view class="icon-badge">学</view>
+          <view class="menu-icon-frame">
+            <image class="menu-icon" src="../../images/tar_icon/study_record.png" mode="aspectFit"></image>
+          </view>
           <view class="menu-texts">
             <text class="menu-title">我的学习记录</text>
             <text class="menu-desc">查看每次学艺评分与时间</text>
@@ -52,7 +58,9 @@
       </view>
       <view class="menu-item" bindtap="navigateToMyLikes">
         <view class="menu-left">
-          <view class="icon-badge icon-badge--gold">藏</view>
+          <view class="menu-icon-frame menu-icon-frame--gold">
+            <image class="menu-icon" src="../../images/tar_icon/collection.png" mode="aspectFit"></image>
+          </view>
           <view class="menu-texts">
             <text class="menu-title">我的收藏</text>
             <text class="menu-desc">收藏的作品与商品</text>
@@ -65,7 +73,9 @@
     <view class="menu-group">
       <view class="menu-item" bindtap="navigateToSettings">
         <view class="menu-left">
-          <view class="icon-badge icon-badge--muted">设</view>
+          <view class="menu-icon-frame menu-icon-frame--muted">
+            <image class="menu-icon" src="../../images/tar_icon/setting.png" mode="aspectFit"></image>
+          </view>
           <view class="menu-texts">
             <text class="menu-title">设置</text>
             <text class="menu-desc">通知、缓存等偏好管理</text>
@@ -75,7 +85,9 @@
       </view>
       <view class="menu-item" bindtap="navigateToAbout">
         <view class="menu-left">
-          <view class="icon-badge icon-badge--muted">关</view>
+          <view class="menu-icon-frame menu-icon-frame--muted">
+            <image class="menu-icon" src="../../images/tar_icon/about.png" mode="aspectFit"></image>
+          </view>
           <view class="menu-texts">
             <text class="menu-title">关于我们</text>
             <text class="menu-desc">了解平台使命与联系方式</text>

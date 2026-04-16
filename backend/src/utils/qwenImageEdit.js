@@ -12,11 +12,31 @@ const path = require('path');
 const axios = require('axios');
 const OpenAI = require('openai');
 
+const DEFAULT_ALLOWED_MODELS = ['qwen-image-edit-plus', 'wan2.6-image', 'wanx-v1'];
+
+function parseAllowedModels() {
+  const raw = String(process.env.QWEN_IMAGE_ALLOWED_MODELS || '').trim();
+  const fromEnv = raw
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  return fromEnv.length > 0 ? fromEnv : DEFAULT_ALLOWED_MODELS;
+}
+
+function isModelAllowed(model, allowedModels) {
+  const name = String(model || '').trim();
+  if (!name) return false;
+  if (/free|trial/i.test(name)) return false;
+  return allowedModels.includes(name);
+}
+
 function getQwenImageConfig() {
   const apiKey = process.env.QWEN_API_KEY || process.env.DASHSCOPE_API_KEY;
   const baseURL = process.env.QWEN_BASE_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1';
   const performanceOrder = ['qwen-image-edit-plus', 'wanx-v1', 'wan2.6-image'];
   const modelChainRaw = process.env.QWEN_IMAGE_MODEL_CHAIN || process.env.TRANSFORM_QWEN_IMAGE_MODEL_CHAIN || '';
+  const allowedModels = parseAllowedModels();
 
   const chainFromEnv = modelChainRaw
     .split(',')
@@ -28,12 +48,20 @@ function getQwenImageConfig() {
   // 去重并保持顺序
   const modelChain = [];
   for (const m of candidateModels) {
-    if (!modelChain.includes(m)) {
+    if (isModelAllowed(m, allowedModels) && !modelChain.includes(m)) {
       modelChain.push(m);
     }
   }
 
-  return { apiKey, baseURL, modelChain };
+  if (modelChain.length === 0) {
+    for (const m of performanceOrder) {
+      if (isModelAllowed(m, allowedModels) && !modelChain.includes(m)) {
+        modelChain.push(m);
+      }
+    }
+  }
+
+  return { apiKey, baseURL, modelChain, allowedModels };
 }
 
 function getDashScopeOrigin(baseURL) {
@@ -193,6 +221,23 @@ async function sleep(ms) {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function tryRemoveFile(filePath) {
+  try {
+    if (filePath && fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  } catch (error) {
+    console.warn(`⚠️ [Qwen-Image] 清理临时文件失败: ${error.message}`);
+  }
+}
+
+function saveBufferAsTempPng(buffer, prefix = 'qwen-temp') {
+  const filename = `${prefix}-${Date.now()}-${Math.round(Math.random() * 1e9)}.png`;
+  const filePath = path.join(process.cwd(), 'backend', 'uploads', 'temp', filename);
+  fs.writeFileSync(filePath, buffer);
+  return filePath;
+}
+
 function buildEditPrompt({ productType, stylePrompt, aiPrompt }) {
   const basePrompt = aiPrompt && String(aiPrompt).trim()
     ? String(aiPrompt).trim()
@@ -215,8 +260,20 @@ function buildEditPrompt({ productType, stylePrompt, aiPrompt }) {
  * @returns {Promise<{buffer: Buffer, provider: string, model: string, triedModels: string[]}|null>}
  */
 async function enhanceImageWithQwen(params) {
-  const { baseImagePath, baseImageUrl, productType, stylePrompt, aiPrompt } = params || {};
-  const { apiKey, baseURL, modelChain } = getQwenImageConfig();
+  const {
+    baseImagePath,
+    baseImageUrl,
+    productType,
+    stylePrompt,
+    aiPrompt,
+    modelChain: forceModelChain,
+  } = params || {};
+  const config = getQwenImageConfig();
+  const { apiKey, baseURL, allowedModels } = config;
+  const requestedChain = Array.isArray(forceModelChain) && forceModelChain.length > 0
+    ? forceModelChain
+    : config.modelChain;
+  const modelChain = requestedChain.filter((m) => isModelAllowed(m, allowedModels));
 
   if (!apiKey || /^your_/i.test(apiKey)) {
     console.log('⚠️ [Qwen-Image] 未配置 QWEN_API_KEY，跳过 AI 图像增强');
@@ -225,6 +282,11 @@ async function enhanceImageWithQwen(params) {
 
   if (!baseImagePath || !fs.existsSync(baseImagePath)) {
     console.warn('⚠️ [Qwen-Image] baseImagePath 不存在，跳过 AI 图像增强');
+    return null;
+  }
+
+  if (modelChain.length === 0) {
+    console.warn('⚠️ [Qwen-Image] 当前模型链为空（可能被 allowlist 过滤），跳过 AI 图像增强');
     return null;
   }
 
@@ -537,6 +599,109 @@ async function enhanceImageWithQwen(params) {
   return null;
 }
 
+async function generateImageWithWan(model, prompt, client) {
+  const result = await client.images.generate({
+    model,
+    prompt,
+    n: 1,
+    size: '1024x1024',
+  });
+
+  const item = result?.data?.[0];
+  const b64 = item?.b64_json;
+  const url = item?.url;
+  if (b64) {
+    return toBufferFromB64(b64);
+  }
+  if (url) {
+    return toBufferFromUrl(url);
+  }
+  return null;
+}
+
+/**
+ * 两阶段策略：wan2.6-image 先生成，再用 qwen-image-edit-plus 精修。
+ * - 第一阶段失败：返回 null
+ * - 第二阶段失败：回退第一阶段结果
+ */
+async function generateThenEnhanceWithQwen(params) {
+  const {
+    productType,
+    stylePrompt,
+    aiPrompt,
+  } = params || {};
+
+  const { apiKey, baseURL, allowedModels } = getQwenImageConfig();
+  if (!apiKey || /^your_/i.test(apiKey)) {
+    console.log('⚠️ [Qwen-Image] 未配置 QWEN_API_KEY，跳过两阶段图像生成');
+    return null;
+  }
+
+  const generatorModel = 'wan2.6-image';
+  const enhancerModel = 'qwen-image-edit-plus';
+  if (!isModelAllowed(generatorModel, allowedModels) || !isModelAllowed(enhancerModel, allowedModels)) {
+    console.warn('⚠️ [Qwen-Image] 两阶段模型不在 allowlist，已跳过');
+    return null;
+  }
+
+  const client = new OpenAI({ apiKey, baseURL });
+  const prompt = buildEditPrompt({ productType, stylePrompt, aiPrompt });
+
+  let generatedBuffer = null;
+  try {
+    generatedBuffer = await generateImageWithWan(generatorModel, prompt, client);
+  } catch (error) {
+    const parsed = parseHttpError(error);
+    console.warn(`⚠️ [Qwen-Image] 第一阶段生成失败: ${parsed.message} (status=${parsed.status || 'N/A'}, code=${parsed.code || 'N/A'})`);
+    return null;
+  }
+
+  if (!generatedBuffer || generatedBuffer.length === 0) {
+    console.warn('⚠️ [Qwen-Image] 第一阶段生成为空，跳过两阶段策略');
+    return null;
+  }
+
+  const tempPath = saveBufferAsTempPng(generatedBuffer, 'wan-generated');
+  try {
+    const enhanced = await enhanceImageWithQwen({
+      baseImagePath: tempPath,
+      productType,
+      stylePrompt,
+      aiPrompt: `${prompt}\n请在不改变主体语义的前提下，进一步提升清晰度、细节层次、材质质感和边缘干净度。`,
+      modelChain: [enhancerModel],
+    });
+
+    if (enhanced && enhanced.buffer && enhanced.buffer.length > 0) {
+      return {
+        buffer: enhanced.buffer,
+        provider: 'two-stage-qwen',
+        model: enhancerModel,
+        triedModels: [generatorModel, enhancerModel],
+        pipeline: {
+          stage1: generatorModel,
+          stage2: enhancerModel,
+          stage2Applied: true,
+        },
+      };
+    }
+
+    return {
+      buffer: generatedBuffer,
+      provider: 'two-stage-qwen-fallback-stage1',
+      model: generatorModel,
+      triedModels: [generatorModel, enhancerModel],
+      pipeline: {
+        stage1: generatorModel,
+        stage2: enhancerModel,
+        stage2Applied: false,
+      },
+    };
+  } finally {
+    tryRemoveFile(tempPath);
+  }
+}
+
 module.exports = {
   enhanceImageWithQwen,
+  generateThenEnhanceWithQwen,
 };

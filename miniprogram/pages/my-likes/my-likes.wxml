@@ -1,7 +1,6 @@
 <!--pages/my-likes/my-likes.wxml-->
 <view class="page">
   <view class="hero-card">
-    <view class="icon-badge icon-badge--gold hero-badge">藏</view>
     <view class="hero-info">
       <text class="hero-title">我的收藏</text>
       <text class="hero-desc">收藏的作品与文创商品</text>

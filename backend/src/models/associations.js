@@ -12,6 +12,10 @@ const ARContent = require('./ARContent');
 const Master = require('./Master');
 const News = require('./News');
 const Subscription = require('./Subscription');
+const HeritageQaMessage = require('./HeritageQaMessage');
+const HeritageQuizQuestion = require('./HeritageQuizQuestion');
+const HeritageQuizSession = require('./HeritageQuizSession');
+const HeritageQuizSessionAnswer = require('./HeritageQuizSessionAnswer');
 
 // User 关联
 User.hasMany(Artwork, { foreignKey: 'authorId', as: 'artworks' });
@@ -21,6 +25,8 @@ User.hasMany(ProductRating, { foreignKey: 'userId', as: 'productRatings' });
 User.hasMany(ProductLike, { foreignKey: 'userId', as: 'productLikes' });
 User.hasMany(Comment, { foreignKey: 'userId', as: 'comments' });
 User.hasMany(Order, { foreignKey: 'userId', as: 'orders' });
+User.hasMany(HeritageQaMessage, { foreignKey: 'userId', as: 'heritageQaMessages' });
+User.hasMany(HeritageQuizSession, { foreignKey: 'userId', as: 'heritageQuizSessions' });
 
 // Artwork 关联
 Artwork.belongsTo(User, { foreignKey: 'authorId', as: 'author' });
@@ -79,6 +85,28 @@ View.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 // Order 关联
 Order.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
+// Heritage QA / Quiz 关联
+HeritageQaMessage.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+
+HeritageQuizSession.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+HeritageQuizSession.hasMany(HeritageQuizSessionAnswer, {
+  foreignKey: 'sessionId',
+  as: 'answers'
+});
+
+HeritageQuizSessionAnswer.belongsTo(HeritageQuizSession, {
+  foreignKey: 'sessionId',
+  as: 'session'
+});
+HeritageQuizSessionAnswer.belongsTo(HeritageQuizQuestion, {
+  foreignKey: 'questionId',
+  as: 'question'
+});
+HeritageQuizQuestion.hasMany(HeritageQuizSessionAnswer, {
+  foreignKey: 'questionId',
+  as: 'sessionAnswers'
+});
+
 module.exports = {
   User,
   Artwork,
@@ -92,6 +120,10 @@ module.exports = {
   ARContent,
   Master,
   News,
-  Subscription
+  Subscription,
+  HeritageQaMessage,
+  HeritageQuizQuestion,
+  HeritageQuizSession,
+  HeritageQuizSessionAnswer
 };
 

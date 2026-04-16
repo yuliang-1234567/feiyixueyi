@@ -7,7 +7,10 @@
 
     <view class="skills-grid">
       <view class="skill-card" wx:for="{{skills}}" wx:key="id" data-skill="{{item}}" bindtap="selectSkill">
-        <view class="skill-icon">{{item.iconText}}</view>
+        <view class="skill-icon">
+          <image wx:if="{{item.icon}}" class="skill-icon-image" src="{{item.icon}}" mode="aspectFit"/>
+          <text wx:else>{{item.iconText}}</text>
+        </view>
         <text class="skill-name">{{item.name}}</text>
       </view>
     </view>
@@ -20,7 +23,10 @@
     </view>
 
     <view class="selected-skill">
-      <view class="skill-icon-large">{{selectedSkill.iconText}}</view>
+      <view class="skill-icon-large">
+        <image wx:if="{{selectedSkill.icon}}" class="skill-icon-large-image" src="{{selectedSkill.icon}}" mode="aspectFit"/>
+        <text wx:else>{{selectedSkill.iconText}}</text>
+      </view>
       <text class="skill-name-large">{{selectedSkill.name}}</text>
     </view>
 

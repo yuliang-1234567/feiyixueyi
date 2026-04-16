@@ -97,7 +97,7 @@ function Transform() {
       if (response.data.success) {
         const data = response.data.data;
         setResult(data);
-        const baseUrl = process.env.REACT_APP_API_URL;
+        const baseUrl = process.env.REACT_APP_API_URL || 'https://feiyixueyi.cn/api';
         const uploadBase = baseUrl.replace(/\/api\/?$/, '');
         setPreviewImage(`${uploadBase}${data.transformedImageUrl}`);
         message.success('预览生成成功！');
@@ -123,14 +123,8 @@ function Transform() {
 
     setSaving(true);
     try {
-      const apiBase = process.env.REACT_APP_API_URL;
-      const uploadBase = apiBase.replace(/\/api\/?$/, '');
-      const imageResponse = await fetch(`${uploadBase}${result.transformedImageUrl}`);
-      const blob = await imageResponse.blob();
-      const file = new File([blob], 'transformed.png', { type: 'image/png' });
-
       const formData = new FormData();
-      formData.append('image', file);
+      formData.append('imageUrl', result.transformedImageUrl);
       const current = form.getFieldsValue();
       const productLabel = buildProductLabel(current);
       const styleLabel = buildStylePrompt(current);

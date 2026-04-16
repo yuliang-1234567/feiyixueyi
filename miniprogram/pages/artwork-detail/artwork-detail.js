@@ -1,7 +1,6 @@
 // pages/artwork-detail/artwork-detail.js
 const api = require('../../utils/api.js');
 const mockArtworks = require('../../utils/galleryWorksMock');
-const { shouldHideFromMiniProgram } = require('../../utils/filters');
 
 // 检查是否是 mock 作品
 function isMockArtworkId(id) {
@@ -32,22 +31,15 @@ Page({
     this.setData({ loading: true });
     try {
         const res = await api.get(`/artworks/${id}`);
-        const artwork = res.data.artwork;
+        const artwork = res?.data?.artwork || res?.artwork || null;
         const getSafeImageUrl = require('../../utils/getSafeImageUrl');
         if (artwork && artwork.imageUrl) {
           artwork.imageUrl = getSafeImageUrl(artwork.imageUrl);
         }
 
-        // if (shouldHideFromMiniProgram(artwork)) {
-        //   wx.showToast({
-        //     title: '该作品暂不在小程序展示',
-        //     icon: 'none'
-        //   });
-        //   setTimeout(() => {
-        //     wx.navigateBack();
-        //   }, 500);
-        //   return;
-        // }
+        if (!artwork) {
+          throw new Error('作品不存在');
+        }
 
         this.setData({
           artwork,

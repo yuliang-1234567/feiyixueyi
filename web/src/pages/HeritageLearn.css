@@ -314,6 +314,34 @@
   background: #a00d24;
 }
 
+.qa-mode-switch {
+  display: flex;
+  gap: 8px;
+}
+
+.qa-mode-btn {
+  min-width: 120px;
+}
+
+.qa-mode-btn.active {
+  box-shadow: 0 4px 12px rgba(200, 16, 46, 0.22);
+}
+
+.quiz-type-tag {
+  margin-left: 10px;
+  vertical-align: middle;
+}
+
+.quiz-judge-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.quiz-judge-btn {
+  min-width: 96px;
+}
+
 .path-arrow {
   font-size: 24px;
   color: #ccc;
@@ -482,4 +510,221 @@
   text-align: center;
   color: #999;
   padding: 40px 20px;
+}
+
+.section-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.qa-entry-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.qa-entry-btn {
+  background: rgba(200, 16, 46, 0.92);
+  border: none;
+  border-radius: 10px;
+}
+
+.qa-entry-btn:hover {
+  background: #a00d24;
+}
+
+.qa-entry-mode-indicator {
+  display: inline-flex;
+  align-items: center;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.qa-hub-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.qa-hub-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.qa-mode-panel,
+.quiz-mode-panel {
+  border: 1px solid rgba(139, 111, 71, 0.14);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.84);
+  padding: 16px;
+}
+
+.qa-input-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.qa-input-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.qa-history-wrap {
+  border-top: 1px solid rgba(139, 111, 71, 0.14);
+  padding-top: 14px;
+}
+
+.qa-history-title {
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+}
+
+.qa-loading-text {
+  color: var(--text-secondary);
+}
+
+.qa-message-list {
+  max-height: 420px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.qa-message-item {
+  border: 1px solid rgba(139, 111, 71, 0.14);
+  border-radius: 10px;
+  padding: 12px;
+  background: #fff;
+}
+
+.qa-question {
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.qa-answer {
+  color: var(--text-secondary);
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.qa-meta {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #888;
+  font-size: 12px;
+  gap: 12px;
+}
+
+.quiz-start-box {
+  text-align: center;
+  color: var(--text-secondary);
+  line-height: 1.8;
+  padding: 24px 10px;
+}
+
+.quiz-progress {
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.quiz-questions-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.quiz-question-item {
+  border: 1px solid rgba(139, 111, 71, 0.14);
+  border-radius: 10px;
+  background: #fff;
+  padding: 12px;
+}
+
+.quiz-stem {
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+}
+
+.quiz-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 14px;
+}
+
+.quiz-submit-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.quiz-result-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.quiz-score-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  color: #8a6f47;
+}
+
+.quiz-result-list {
+  max-height: 420px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.quiz-result-item {
+  border: 1px solid rgba(139, 111, 71, 0.14);
+  border-radius: 10px;
+  background: #fff;
+  padding: 12px;
+}
+
+.quiz-result-line {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .section-title-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .qa-entry-actions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .quiz-options {
+    grid-template-columns: 1fr;
+  }
+
+  .qa-meta {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }

@@ -152,7 +152,7 @@ const Orders = () => {
                         }}
                       >
                         <img
-                          src={item.imageUrl ? (item.imageUrl.startsWith('http') ? item.imageUrl : `${((process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3100/api' : 'http://121.199.74.74/api'))).replace(/\/api\/?$/, '')}${item.imageUrl}`) : ''}
+                          src={item.imageUrl ? (item.imageUrl.startsWith('http') ? item.imageUrl : `${((process.env.REACT_APP_API_URL || 'https://feiyixueyi.cn/api')).replace(/\/api\/?$/, '')}${item.imageUrl}`) : ''}
                           alt={item.productName || item.name}
                           style={{
                             width: '80px',
