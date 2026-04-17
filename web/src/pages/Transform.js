@@ -3,13 +3,15 @@ import { Button, Form, Input, InputNumber, Modal, Select, Spin, Switch, Tag, mes
 import { PencilRuler, Save, Wand2 } from "lucide-react";
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
+import { buildOptions, fetchStyleSystem } from '../utils/styleSystem';
+import { buildProductOptions, fetchProductSystem } from '../utils/productSystem';
 import { useAuthStore } from '../store/authStore';
 import './Transform.css';
 import { LucideIcon } from "../components/icons/lucide";
 
 const { TextArea } = Input;
 
-const PRESET_PRODUCTS = [
+const FALLBACK_PRESET_PRODUCTS = [
   { value: '手机壳', label: '手机壳' },
   { value: 'T恤', label: 'T恤' },
   { value: '马克杯', label: '马克杯' },
@@ -17,13 +19,14 @@ const PRESET_PRODUCTS = [
   { value: '明信片', label: '明信片' },
 ];
 
-const STYLE_PRESETS = [
-  { value: '水墨', label: '水墨' },
-  { value: '水彩', label: '水彩' },
-  { value: '国潮', label: '国潮' },
-  { value: '工笔', label: '工笔' },
-  { value: '剪纸', label: '剪纸' },
-  { value: '景泰蓝釉彩', label: '景泰蓝釉彩' },
+const FALLBACK_STYLE_PRESETS = [
+  { value: 'ink-wash', label: '水墨' },
+  { value: 'watercolor', label: '水彩' },
+  { value: 'guochao', label: '国潮' },
+  { value: 'gongbi', label: '工笔' },
+  { value: 'paper-cutting', label: '剪纸' },
+  { value: 'cloisonne', label: '景泰蓝釉彩' },
+  { value: 'custom', label: '自定义' },
 ];
 
 const TEMPLATE_PLACEHOLDERS = {
@@ -47,6 +50,8 @@ function Transform() {
   const [previewImage, setPreviewImage] = useState(null);
   const previewRef = useRef(null);
   const [showOptional, setShowOptional] = useState(true);
+  const [stylePresets, setStylePresets] = useState(FALLBACK_STYLE_PRESETS);
+  const [presetProducts, setPresetProducts] = useState(FALLBACK_PRESET_PRODUCTS);
 
   useAuthStore();
 
@@ -61,6 +66,34 @@ function Transform() {
     }
   }, [form, heritageFromQuery]);
 
+  useEffect(() => {
+    let mounted = true;
+    fetchStyleSystem({ scene: 'transform' })
+      .then((data) => {
+        if (!mounted || !data?.styles) return;
+        const options = buildOptions(data.styles);
+        if (options.length) setStylePresets(options);
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    fetchProductSystem({ scene: 'transform' })
+      .then((data) => {
+        if (!mounted || !data?.products) return;
+        const options = buildProductOptions(data.products);
+        if (options.length) setPresetProducts(options);
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const buildProductLabel = (values) => {
     const preset = String(values.productPreset || '').trim();
     const custom = String(values.productCustom || '').trim();
@@ -70,7 +103,9 @@ function Transform() {
   const buildStylePrompt = (values) => {
     const preset = String(values.stylePreset || '').trim();
     const custom = String(values.styleCustom || '').trim();
-    const style = custom || preset || '';
+    // preset 保存的是 styleKey；为了兼容后端已有 stylePrompt 字段，这里传 label/自定义
+    const presetLabel = stylePresets.find((x) => x.value === preset)?.label || preset;
+    const style = custom || presetLabel || '';
     return style;
   };
 
@@ -257,7 +292,7 @@ function Transform() {
               <div className="transform-grid2">
                 <Form.Item name="productPreset" label="产品（预设）" className="transform-item">
                   <Select
-                    options={PRESET_PRODUCTS}
+                    options={presetProducts}
                     placeholder="选择产品"
                     size="middle"
                     onChange={() => setResult(null)}
@@ -274,7 +309,7 @@ function Transform() {
               <div className="transform-grid2">
                 <Form.Item name="stylePreset" label="风格（预设）" className="transform-item">
                   <Select
-                    options={STYLE_PRESETS}
+                    options={stylePresets}
                     placeholder="选择风格"
                     size="middle"
                     onChange={() => setResult(null)}

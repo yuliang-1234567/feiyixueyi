@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { useAuthStore } from '../store/authStore';
 import { getFirstImageUrl } from '../utils/imageUtils';
+import { buildCategoryOptions, fetchProductSystem } from '../utils/productSystem';
 import { LucideIcon } from "../components/icons/lucide";
 
 const { TextArea } = Input;
@@ -26,6 +27,13 @@ const ProductManagement = () => {
   });
   const navigate = useNavigate();
   const { token } = useAuthStore();
+  const [categoryOptions, setCategoryOptions] = useState([
+    { value: 'T恤', label: 'T恤' },
+    { value: '手机壳', label: '手机壳' },
+    { value: '帆布袋', label: '帆布袋' },
+    { value: '明信片', label: '明信片' },
+    { value: '其他', label: '其他' },
+  ]);
 
   const fetchProducts = useCallback(async () => {
     if (!token) {
@@ -63,6 +71,20 @@ const ProductManagement = () => {
       fetchProducts();
     }
   }, [token, fetchProducts]);
+
+  useEffect(() => {
+    let mounted = true;
+    fetchProductSystem({ scene: 'shop' })
+      .then((data) => {
+        if (!mounted || !data?.products) return;
+        const options = buildCategoryOptions(data.products);
+        if (options.length) setCategoryOptions(options);
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleEdit = (product) => {
     setEditingProduct(product);
@@ -440,11 +462,9 @@ const ProductManagement = () => {
               onChange={(value) => setEditForm({ ...editForm, category: value })}
               style={{ width: '100%' }}
             >
-              <Option value="T恤">T恤</Option>
-              <Option value="手机壳">手机壳</Option>
-              <Option value="帆布袋">帆布袋</Option>
-              <Option value="明信片">明信片</Option>
-              <Option value="其他">其他</Option>
+              {categoryOptions.map((opt) => (
+                <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+              ))}
             </Select>
           </div>
           <div style={{ marginBottom: '16px' }}>

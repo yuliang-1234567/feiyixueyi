@@ -23,6 +23,18 @@
   user-select: none;
 }
 
+.sketch-bgCanvas {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.sketch-strokesCanvas {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+
 .sketch-hint {
   position: absolute;
   inset: 0;
@@ -44,6 +56,11 @@
 .sketch-actions {
   display: flex;
   justify-content: flex-end;
+  gap: 10px;
+}
+
+.sketch-undoBtn {
+  border-radius: 10px;
 }
 
 .sketch-clearBtn {

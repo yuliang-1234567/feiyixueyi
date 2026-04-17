@@ -7,17 +7,21 @@
  * - 任一通道成功即返回；全部失败则业务层回退本地算法
  */
 
-const fs = require('fs');
-const path = require('path');
-const axios = require('axios');
-const OpenAI = require('openai');
+const fs = require("fs");
+const path = require("path");
+const axios = require("axios");
+const OpenAI = require("openai");
 
-const DEFAULT_ALLOWED_MODELS = ['qwen-image-edit-plus', 'wan2.6-image', 'wanx-v1'];
+const DEFAULT_ALLOWED_MODELS = [
+  "wan2.6-image",
+  "qwen-image-2.0",
+  "wanx-v1",
+];
 
 function parseAllowedModels() {
-  const raw = String(process.env.QWEN_IMAGE_ALLOWED_MODELS || '').trim();
+  const raw = String(process.env.QWEN_IMAGE_ALLOWED_MODELS || "").trim();
   const fromEnv = raw
-    .split(',')
+    .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
 
@@ -25,7 +29,7 @@ function parseAllowedModels() {
 }
 
 function isModelAllowed(model, allowedModels) {
-  const name = String(model || '').trim();
+  const name = String(model || "").trim();
   if (!name) return false;
   if (/free|trial/i.test(name)) return false;
   return allowedModels.includes(name);
@@ -33,17 +37,26 @@ function isModelAllowed(model, allowedModels) {
 
 function getQwenImageConfig() {
   const apiKey = process.env.QWEN_API_KEY || process.env.DASHSCOPE_API_KEY;
-  const baseURL = process.env.QWEN_BASE_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1';
-  const performanceOrder = ['qwen-image-edit-plus', 'wanx-v1', 'wan2.6-image'];
-  const modelChainRaw = process.env.QWEN_IMAGE_MODEL_CHAIN || process.env.TRANSFORM_QWEN_IMAGE_MODEL_CHAIN || '';
+  const baseURL =
+    process.env.QWEN_BASE_URL ||
+    "https://dashscope.aliyuncs.com/compatible-mode/v1";
+  const performanceOrder = [
+    "wan2.6-image",
+    "qwen-image-2.0",
+  ];
+  const modelChainRaw =
+    process.env.QWEN_IMAGE_MODEL_CHAIN ||
+    process.env.TRANSFORM_QWEN_IMAGE_MODEL_CHAIN ||
+    "";
   const allowedModels = parseAllowedModels();
 
   const chainFromEnv = modelChainRaw
-    .split(',')
+    .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
 
-  const candidateModels = chainFromEnv.length > 0 ? chainFromEnv : performanceOrder;
+  const candidateModels =
+    chainFromEnv.length > 0 ? chainFromEnv : performanceOrder;
 
   // 去重并保持顺序
   const modelChain = [];
@@ -69,17 +82,18 @@ function getDashScopeOrigin(baseURL) {
     const parsed = new URL(baseURL);
     return `${parsed.protocol}//${parsed.host}`;
   } catch (error) {
-    return 'https://dashscope.aliyuncs.com';
+    return "https://dashscope.aliyuncs.com";
   }
 }
 
 function isPrivateOrLocalhostUrl(url) {
   try {
     const parsed = new URL(url);
-    const host = String(parsed.hostname || '').toLowerCase();
-    if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0') return true;
+    const host = String(parsed.hostname || "").toLowerCase();
+    if (host === "localhost" || host === "127.0.0.1" || host === "0.0.0.0")
+      return true;
     // 常见私网/链路本地地址（不做过度复杂的 IP 段判断，先覆盖主要情况）
-    if (host.endsWith('.local')) return true;
+    if (host.endsWith(".local")) return true;
     if (/^10\.\d+\.\d+\.\d+$/.test(host)) return true;
     if (/^192\.168\.\d+\.\d+$/.test(host)) return true;
     if (/^172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+$/.test(host)) return true;
@@ -90,19 +104,19 @@ function isPrivateOrLocalhostUrl(url) {
 }
 
 function toBufferFromB64(data) {
-  if (!data || typeof data !== 'string') {
+  if (!data || typeof data !== "string") {
     return null;
   }
-  return Buffer.from(data, 'base64');
+  return Buffer.from(data, "base64");
 }
 
 async function toBufferFromUrl(url) {
-  if (!url || typeof url !== 'string') {
+  if (!url || typeof url !== "string") {
     return null;
   }
 
   const resp = await axios.get(url, {
-    responseType: 'arraybuffer',
+    responseType: "arraybuffer",
     timeout: 30000,
   });
 
@@ -112,27 +126,25 @@ async function toBufferFromUrl(url) {
 function toDataUrlFromFile(filePath) {
   const ext = path.extname(filePath).toLowerCase();
   const mimeMap = {
-    '.jpg': 'image/jpeg',
-    '.jpeg': 'image/jpeg',
-    '.png': 'image/png',
-    '.webp': 'image/webp',
-    '.gif': 'image/gif',
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".webp": "image/webp",
+    ".gif": "image/gif",
   };
 
-  const mime = mimeMap[ext] || 'image/png';
-  const b64 = fs.readFileSync(filePath).toString('base64');
+  const mime = mimeMap[ext] || "image/png";
+  const b64 = fs.readFileSync(filePath).toString("base64");
   return `data:${mime};base64,${b64}`;
 }
 
 function parseHttpError(error) {
   const data = error?.response?.data || null;
-  const requestId = data?.request_id || data?.requestId || data?.output?.request_id || null;
+  const requestId =
+    data?.request_id || data?.requestId || data?.output?.request_id || null;
   const code = data?.code || data?.error?.code || data?.output?.code || null;
   const message =
-    data?.message ||
-    data?.error?.message ||
-    error?.message ||
-    'unknown';
+    data?.message || data?.error?.message || error?.message || "unknown";
 
   return {
     message,
@@ -144,17 +156,19 @@ function parseHttpError(error) {
 }
 
 function isRateLimitCode(code) {
-  return typeof code === 'string' && /Throttling|RateQuota|rate.?limit/i.test(code);
+  return (
+    typeof code === "string" && /Throttling|RateQuota|rate.?limit/i.test(code)
+  );
 }
 
 function isUrlValidationError(parsed) {
-  const msg = String(parsed?.message || '').toLowerCase();
-  const code = String(parsed?.code || '').toLowerCase();
+  const msg = String(parsed?.message || "").toLowerCase();
+  const code = String(parsed?.code || "").toLowerCase();
   return (
-    msg.includes('url error') ||
-    msg.includes('invalid url') ||
-    msg.includes('download image failed') ||
-    code.includes('invalidurl')
+    msg.includes("url error") ||
+    msg.includes("invalid url") ||
+    msg.includes("download image failed") ||
+    code.includes("invalidurl")
   );
 }
 
@@ -180,14 +194,14 @@ function extractImageResultFromTask(data) {
   for (const item of candidates) {
     if (Array.isArray(item) && item.length > 0) {
       const first = item[0];
-      if (typeof first === 'string') return { url: first };
+      if (typeof first === "string") return { url: first };
       if (first?.url) return { url: first.url };
       if (first?.image_url) return { url: first.image_url };
       if (first?.b64_json) return { b64: first.b64_json };
       if (first?.base64_data) return { b64: first.base64_data };
     }
 
-    if (item && typeof item === 'object') {
+    if (item && typeof item === "object") {
       if (item.url) return { url: item.url };
       if (item.image_url) return { url: item.image_url };
       if (item.b64_json) return { b64: item.b64_json };
@@ -214,7 +228,7 @@ function extractQwenImageFromMultimodalResponse(data) {
 }
 
 function isQwenImageFamilyModel(model) {
-  return /^qwen-image/i.test(String(model || ''));
+  return /^qwen-image/i.test(String(model || ""));
 }
 
 async function sleep(ms) {
@@ -231,17 +245,28 @@ function tryRemoveFile(filePath) {
   }
 }
 
-function saveBufferAsTempPng(buffer, prefix = 'qwen-temp') {
-  const filename = `${prefix}-${Date.now()}-${Math.round(Math.random() * 1e9)}.png`;
-  const filePath = path.join(process.cwd(), 'backend', 'uploads', 'temp', filename);
+function saveBufferAsTempPng(buffer, prefix = "qwen-temp") {
+  const filename = `${prefix}-${Date.now()}-${Math.round(
+    Math.random() * 1e9
+  )}.png`;
+  const filePath = path.join(
+    process.cwd(),
+    "backend",
+    "uploads",
+    "temp",
+    filename
+  );
   fs.writeFileSync(filePath, buffer);
   return filePath;
 }
 
 function buildEditPrompt({ productType, stylePrompt, aiPrompt }) {
-  const basePrompt = aiPrompt && String(aiPrompt).trim()
-    ? String(aiPrompt).trim()
-    : `将图像优化为高质量电商效果图，产品类型为${productType || '文创产品'}，保留核心纹样元素，增强层次、质感、光影和真实感，背景简洁干净。`;
+  const basePrompt =
+    aiPrompt && String(aiPrompt).trim()
+      ? String(aiPrompt).trim()
+      : `将图像优化为高质量电商效果图，产品类型为${
+          productType || "文创产品"
+        }，保留核心纹样元素，增强层次、质感、光影和真实感，背景简洁干净。`;
 
   if (stylePrompt && String(stylePrompt).trim()) {
     return `${basePrompt}\n风格偏好：${String(stylePrompt).trim()}`;
@@ -263,6 +288,8 @@ async function enhanceImageWithQwen(params) {
   const {
     baseImagePath,
     baseImageUrl,
+    referenceImagePaths,
+    referenceImageUrls,
     productType,
     stylePrompt,
     aiPrompt,
@@ -270,23 +297,28 @@ async function enhanceImageWithQwen(params) {
   } = params || {};
   const config = getQwenImageConfig();
   const { apiKey, baseURL, allowedModels } = config;
-  const requestedChain = Array.isArray(forceModelChain) && forceModelChain.length > 0
-    ? forceModelChain
-    : config.modelChain;
-  const modelChain = requestedChain.filter((m) => isModelAllowed(m, allowedModels));
+  const requestedChain =
+    Array.isArray(forceModelChain) && forceModelChain.length > 0
+      ? forceModelChain
+      : config.modelChain;
+  const modelChain = requestedChain.filter((m) =>
+    isModelAllowed(m, allowedModels)
+  );
 
   if (!apiKey || /^your_/i.test(apiKey)) {
-    console.log('⚠️ [Qwen-Image] 未配置 QWEN_API_KEY，跳过 AI 图像增强');
+    console.log("⚠️ [Qwen-Image] 未配置 QWEN_API_KEY，跳过 AI 图像增强");
     return null;
   }
 
   if (!baseImagePath || !fs.existsSync(baseImagePath)) {
-    console.warn('⚠️ [Qwen-Image] baseImagePath 不存在，跳过 AI 图像增强');
+    console.warn("⚠️ [Qwen-Image] baseImagePath 不存在，跳过 AI 图像增强");
     return null;
   }
 
   if (modelChain.length === 0) {
-    console.warn('⚠️ [Qwen-Image] 当前模型链为空（可能被 allowlist 过滤），跳过 AI 图像增强');
+    console.warn(
+      "⚠️ [Qwen-Image] 当前模型链为空（可能被 allowlist 过滤），跳过 AI 图像增强"
+    );
     return null;
   }
 
@@ -302,7 +334,7 @@ async function enhanceImageWithQwen(params) {
       image: fs.createReadStream(baseImagePath),
       prompt,
       n: 1,
-      size: '1024x1024',
+      size: "1024x1024",
     });
 
     const item = result?.data?.[0];
@@ -324,7 +356,27 @@ async function enhanceImageWithQwen(params) {
       baseImageUrl &&
       /^https?:\/\//i.test(baseImageUrl) &&
       !isPrivateOrLocalhostUrl(baseImageUrl);
-    const imageInput = canUseUrl ? baseImageUrl : toDataUrlFromFile(baseImagePath);
+    const imageInput = canUseUrl
+      ? baseImageUrl
+      : toDataUrlFromFile(baseImagePath);
+
+    const normalizedRefUrls = Array.isArray(referenceImageUrls)
+      ? referenceImageUrls.map((u) => String(u || "").trim()).filter(Boolean)
+      : [];
+    const normalizedRefPaths = Array.isArray(referenceImagePaths)
+      ? referenceImagePaths.map((p) => String(p || "").trim()).filter(Boolean)
+      : [];
+
+    const refContents = [];
+    for (const url of normalizedRefUrls) {
+      const ok = /^https?:\/\//i.test(url) && !isPrivateOrLocalhostUrl(url);
+      if (!ok) continue;
+      refContents.push({ image: url });
+    }
+    for (const p of normalizedRefPaths) {
+      if (!p || !fs.existsSync(p)) continue;
+      refContents.push({ image: toDataUrlFromFile(p) });
+    }
 
     const resp = await axios.post(
       `${dashScopeOrigin}/api/v1/services/aigc/multimodal-generation/generation`,
@@ -333,9 +385,10 @@ async function enhanceImageWithQwen(params) {
         input: {
           messages: [
             {
-              role: 'user',
+              role: "user",
               content: [
                 { image: imageInput },
+                ...refContents,
                 { text: prompt },
               ],
             },
@@ -345,13 +398,13 @@ async function enhanceImageWithQwen(params) {
           n: 1,
           watermark: false,
           prompt_extend: true,
-          size: '1024*1024',
+          size: "1024*1024",
         },
       },
       {
         headers: {
           Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         timeout: 90000,
       }
@@ -375,58 +428,64 @@ async function enhanceImageWithQwen(params) {
     const imageDataUrl = toDataUrlFromFile(baseImagePath);
 
     if (!imageUrl) {
-      console.warn('⚠️ [Qwen-Image] 原生接口未提供可用公网 URL（localhost/私网会被拦截），将只尝试 data-url 兜底变体');
+      console.warn(
+        "⚠️ [Qwen-Image] 原生接口未提供可用公网 URL（localhost/私网会被拦截），将只尝试 data-url 兜底变体"
+      );
     }
 
     const headers = {
       Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-      'X-DashScope-Async': 'enable',
+      "Content-Type": "application/json",
+      "X-DashScope-Async": "enable",
     };
 
     const payloadVariants = [
-      ...(imageUrl ? [
-        {
-          name: 'image_url:http(s)',
-          body: {
-            model,
-            input: { prompt, image_url: imageUrl },
-            parameters: { size: '1024*1024' },
-          },
-        },
-        {
-          name: 'image:http(s)',
-          body: {
-            model,
-            input: { prompt, image: imageUrl },
-            parameters: { size: '1024*1024' },
-          },
-        },
-      ] : []),
+      ...(imageUrl
+        ? [
+            {
+              name: "image_url:http(s)",
+              body: {
+                model,
+                input: { prompt, image_url: imageUrl },
+                parameters: { size: "1024*1024" },
+              },
+            },
+            {
+              name: "image:http(s)",
+              body: {
+                model,
+                input: { prompt, image: imageUrl },
+                parameters: { size: "1024*1024" },
+              },
+            },
+          ]
+        : []),
     ];
 
     // 内联数据策略：
     // - QWEN_IMAGE_ENABLE_INLINE_DATA=true  强制开启
     // - QWEN_IMAGE_ENABLE_INLINE_DATA=false 强制关闭
     // - 默认 auto：当图片 <= 7MB 时追加 1 个 data-url 变体，避免 URL 抓取失败
-    const inlineMode = String(process.env.QWEN_IMAGE_ENABLE_INLINE_DATA || 'auto').toLowerCase();
+    const inlineMode = String(
+      process.env.QWEN_IMAGE_ENABLE_INLINE_DATA || "auto"
+    ).toLowerCase();
     const fileSize = fs.statSync(baseImagePath).size;
     const shouldTryInline =
-      inlineMode === 'true' ||
-      (inlineMode !== 'false' && fileSize > 0 && fileSize <= 7 * 1024 * 1024);
+      inlineMode === "true" ||
+      (inlineMode !== "false" && fileSize > 0 && fileSize <= 7 * 1024 * 1024);
 
     if (shouldTryInline) {
-      payloadVariants.push(
-        {
-          name: 'image:data-url',
-          body: {
-            model,
-            input: { prompt, image: imageDataUrl },
-            parameters: { size: '1024*1024' },
-          },
-        }
+      payloadVariants.push({
+        name: "image:data-url",
+        body: {
+          model,
+          input: { prompt, image: imageDataUrl },
+          parameters: { size: "1024*1024" },
+        },
+      });
+      console.log(
+        `ℹ️ [Qwen-Image] 启用内联图片兜底: mode=${inlineMode}, size=${fileSize}`
       );
-      console.log(`ℹ️ [Qwen-Image] 启用内联图片兜底: mode=${inlineMode}, size=${fileSize}`);
     }
 
     let submitResp = null;
@@ -443,17 +502,27 @@ async function enhanceImageWithQwen(params) {
             timeout: 45000,
           }
         );
-        console.log(`✅ [Qwen-Image] 原生接口提交成功: model=${model}, variant=${variant.name}`);
+        console.log(
+          `✅ [Qwen-Image] 原生接口提交成功: model=${model}, variant=${variant.name}`
+        );
         break;
       } catch (error) {
         const parsed = parseHttpError(error);
         lastError = error;
-        console.warn(`⚠️ [Qwen-Image] 原生接口提交失败: model=${model}, variant=${variant.name}, status=${parsed.status || 'N/A'}, code=${parsed.code || 'N/A'}, requestId=${parsed.requestId || 'N/A'}, msg=${parsed.message}`);
+        console.warn(
+          `⚠️ [Qwen-Image] 原生接口提交失败: model=${model}, variant=${
+            variant.name
+          }, status=${parsed.status || "N/A"}, code=${
+            parsed.code || "N/A"
+          }, requestId=${parsed.requestId || "N/A"}, msg=${parsed.message}`
+        );
         if (isUrlValidationError(parsed)) {
           sawUrlError = true;
         }
         if (isRateLimitCode(parsed.code)) {
-          const throttleError = new Error(parsed.message || 'DashScope 请求频率受限');
+          const throttleError = new Error(
+            parsed.message || "DashScope 请求频率受限"
+          );
           throttleError.stopChain = true;
           throttleError.code = parsed.code;
           throw throttleError;
@@ -463,9 +532,11 @@ async function enhanceImageWithQwen(params) {
 
     if (!submitResp) {
       if (sawUrlError && !shouldTryInline) {
-        console.warn('⚠️ [Qwen-Image] 当前为 URL 校验失败，且未启用内联图片兜底。可设置 QWEN_IMAGE_ENABLE_INLINE_DATA=true 再试。');
+        console.warn(
+          "⚠️ [Qwen-Image] 当前为 URL 校验失败，且未启用内联图片兜底。可设置 QWEN_IMAGE_ENABLE_INLINE_DATA=true 再试。"
+        );
       }
-      throw lastError || new Error('DashScope 原生接口提交失败');
+      throw lastError || new Error("DashScope 原生接口提交失败");
     }
 
     const taskId = extractTaskId(submitResp.data);
@@ -477,22 +548,27 @@ async function enhanceImageWithQwen(params) {
     }
 
     for (let i = 0; i < 20; i++) {
-      const pollResp = await axios.get(`${dashScopeOrigin}/api/v1/tasks/${taskId}`, {
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-        },
-        timeout: 30000,
-      });
+      const pollResp = await axios.get(
+        `${dashScopeOrigin}/api/v1/tasks/${taskId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+          },
+          timeout: 30000,
+        }
+      );
 
-      const status = pollResp?.data?.output?.task_status || pollResp?.data?.output?.taskStatus;
-      if (status === 'SUCCEEDED') {
+      const status =
+        pollResp?.data?.output?.task_status ||
+        pollResp?.data?.output?.taskStatus;
+      if (status === "SUCCEEDED") {
         const extracted = extractImageResultFromTask(pollResp.data);
         if (extracted?.b64) return toBufferFromB64(extracted.b64);
         if (extracted?.url) return toBufferFromUrl(extracted.url);
         return null;
       }
 
-      if (status === 'FAILED' || status === 'CANCELED') {
+      if (status === "FAILED" || status === "CANCELED") {
         return null;
       }
 
@@ -510,22 +586,36 @@ async function enhanceImageWithQwen(params) {
       try {
         const buffer = await tryQwenImageMultimodal(model);
         if (buffer && buffer.length > 0) {
+          console.log(`[Qwen-Image] 模型 ${model} 官方端点返回成功`);
           return {
             buffer,
-            provider: 'dashscope-multimodal-generation',
+            provider: "dashscope-multimodal-generation",
             model,
             triedModels,
           };
         }
-        console.warn(`⚠️ [Qwen-Image] 模型 ${model} 官方端点返回为空，继续后续通道`);
+        console.warn(
+          `⚠️ [Qwen-Image] 模型 ${model} 官方端点返回为空，继续后续通道`
+        );
       } catch (error) {
         const parsed = parseHttpError(error);
-        console.warn(`⚠️ [Qwen-Image] 模型 ${model} 官方端点失败: ${parsed.message} (status=${parsed.status || 'N/A'}, code=${parsed.code || 'N/A'}, requestId=${parsed.requestId || 'N/A'})`);
+        console.warn(
+          `⚠️ [Qwen-Image] 模型 ${model} 官方端点失败: ${
+            parsed.message
+          } (status=${parsed.status || "N/A"}, code=${
+            parsed.code || "N/A"
+          }, requestId=${parsed.requestId || "N/A"})`
+        );
         if (parsed.data) {
-          console.warn('⚠️ [Qwen-Image] 官方端点失败详情:', JSON.stringify(parsed.data).slice(0, 1200));
+          console.warn(
+            "⚠️ [Qwen-Image] 官方端点失败详情:",
+            JSON.stringify(parsed.data).slice(0, 1200)
+          );
         }
         if (isRateLimitCode(parsed.code)) {
-          console.error('❌ [Qwen-Image] 官方端点命中频率限制，停止后续模型尝试');
+          console.error(
+            "❌ [Qwen-Image] 官方端点命中频率限制，停止后续模型尝试"
+          );
           break;
         }
       }
@@ -536,23 +626,36 @@ async function enhanceImageWithQwen(params) {
       const buffer = await tryOpenAICompatible(model);
 
       if (!buffer || buffer.length === 0) {
-        console.warn(`⚠️ [Qwen-Image] 模型 ${model} 兼容接口返回为空，尝试原生接口`);
+        console.warn(
+          `⚠️ [Qwen-Image] 模型 ${model} 兼容接口返回为空，尝试原生接口`
+        );
       } else {
         return {
           buffer,
-          provider: 'dashscope-openai-compatible',
+          provider: "dashscope-openai-compatible",
           model,
           triedModels,
         };
       }
     } catch (error) {
       const parsed = parseHttpError(error);
-      console.warn(`⚠️ [Qwen-Image] 模型 ${model} 兼容接口失败: ${parsed.message} (status=${parsed.status || 'N/A'}, code=${parsed.code || 'N/A'}, requestId=${parsed.requestId || 'N/A'})`);
+      console.warn(
+        `⚠️ [Qwen-Image] 模型 ${model} 兼容接口失败: ${
+          parsed.message
+        } (status=${parsed.status || "N/A"}, code=${
+          parsed.code || "N/A"
+        }, requestId=${parsed.requestId || "N/A"})`
+      );
       if (parsed.data) {
-        console.warn('⚠️ [Qwen-Image] 兼容接口失败详情:', JSON.stringify(parsed.data).slice(0, 1200));
+        console.warn(
+          "⚠️ [Qwen-Image] 兼容接口失败详情:",
+          JSON.stringify(parsed.data).slice(0, 1200)
+        );
       }
       if (isRateLimitCode(parsed.code)) {
-        console.error('❌ [Qwen-Image] 命中频率限制，停止后续模型尝试，避免继续消耗配额');
+        console.error(
+          "❌ [Qwen-Image] 命中频率限制，停止后续模型尝试，避免继续消耗配额"
+        );
         break;
       }
     }
@@ -560,42 +663,60 @@ async function enhanceImageWithQwen(params) {
     // 通道2：DashScope原生异步任务接口
     try {
       // wanx/wan2.* 等模型如果没有公网 URL，大概率会被 URL 校验卡住；此时跳过以减少噪声与无效请求
-      if (!isQwenImageFamilyModel(model) && (!baseImageUrl || isPrivateOrLocalhostUrl(baseImageUrl))) {
-        console.warn(`⚠️ [Qwen-Image] 模型 ${model} 需要公网 URL；当前为 localhost/私网，跳过原生接口尝试`);
+      if (
+        !isQwenImageFamilyModel(model) &&
+        (!baseImageUrl || isPrivateOrLocalhostUrl(baseImageUrl))
+      ) {
+        console.warn(
+          `⚠️ [Qwen-Image] 模型 ${model} 需要公网 URL；当前为 localhost/私网，跳过原生接口尝试`
+        );
         continue;
       }
 
       const buffer = await tryDashScopeNativeTask(model);
       if (!buffer || buffer.length === 0) {
-        console.warn(`⚠️ [Qwen-Image] 模型 ${model} 原生接口返回为空，继续尝试下一个模型`);
+        console.warn(
+          `⚠️ [Qwen-Image] 模型 ${model} 原生接口返回为空，继续尝试下一个模型`
+        );
         continue;
       }
 
       return {
         buffer,
-        provider: 'dashscope-native-task',
+        provider: "dashscope-native-task",
         model,
         triedModels,
       };
     } catch (error) {
       if (error?.stopChain) {
-        console.error('❌ [Qwen-Image] 原生接口命中频率限制，停止后续模型尝试');
+        console.error("❌ [Qwen-Image] 原生接口命中频率限制，停止后续模型尝试");
         break;
       }
 
       const parsed = parseHttpError(error);
-      console.warn(`⚠️ [Qwen-Image] 模型 ${model} 原生接口失败: ${parsed.message} (status=${parsed.status || 'N/A'}, code=${parsed.code || 'N/A'}, requestId=${parsed.requestId || 'N/A'})`);
+      console.warn(
+        `⚠️ [Qwen-Image] 模型 ${model} 原生接口失败: ${
+          parsed.message
+        } (status=${parsed.status || "N/A"}, code=${
+          parsed.code || "N/A"
+        }, requestId=${parsed.requestId || "N/A"})`
+      );
       if (parsed.data) {
-        console.warn('⚠️ [Qwen-Image] 原生接口失败详情:', JSON.stringify(parsed.data).slice(0, 1200));
+        console.warn(
+          "⚠️ [Qwen-Image] 原生接口失败详情:",
+          JSON.stringify(parsed.data).slice(0, 1200)
+        );
       }
       if (isRateLimitCode(parsed.code)) {
-        console.error('❌ [Qwen-Image] 命中频率限制，停止后续模型尝试，避免继续消耗配额');
+        console.error(
+          "❌ [Qwen-Image] 命中频率限制，停止后续模型尝试，避免继续消耗配额"
+        );
         break;
       }
     }
   }
 
-  console.error('❌ [Qwen-Image] 模型链全部失败，回退本地算法');
+  console.error("❌ [Qwen-Image] 模型链全部失败，回退本地算法");
   return null;
 }
 
@@ -604,7 +725,7 @@ async function generateImageWithWan(model, prompt, client) {
     model,
     prompt,
     n: 1,
-    size: '1024x1024',
+    size: "1024x1024",
   });
 
   const item = result?.data?.[0];
@@ -625,22 +746,21 @@ async function generateImageWithWan(model, prompt, client) {
  * - 第二阶段失败：回退第一阶段结果
  */
 async function generateThenEnhanceWithQwen(params) {
-  const {
-    productType,
-    stylePrompt,
-    aiPrompt,
-  } = params || {};
+  const { productType, stylePrompt, aiPrompt } = params || {};
 
   const { apiKey, baseURL, allowedModels } = getQwenImageConfig();
   if (!apiKey || /^your_/i.test(apiKey)) {
-    console.log('⚠️ [Qwen-Image] 未配置 QWEN_API_KEY，跳过两阶段图像生成');
+    console.log("⚠️ [Qwen-Image] 未配置 QWEN_API_KEY，跳过两阶段图像生成");
     return null;
   }
 
-  const generatorModel = 'wan2.6-image';
-  const enhancerModel = 'qwen-image-edit-plus';
-  if (!isModelAllowed(generatorModel, allowedModels) || !isModelAllowed(enhancerModel, allowedModels)) {
-    console.warn('⚠️ [Qwen-Image] 两阶段模型不在 allowlist，已跳过');
+  const generatorModel = "wan2.6-image";
+  const enhancerModel = "qwen-image-edit-plus";
+  if (
+    !isModelAllowed(generatorModel, allowedModels) ||
+    !isModelAllowed(enhancerModel, allowedModels)
+  ) {
+    console.warn("⚠️ [Qwen-Image] 两阶段模型不在 allowlist，已跳过");
     return null;
   }
 
@@ -649,19 +769,27 @@ async function generateThenEnhanceWithQwen(params) {
 
   let generatedBuffer = null;
   try {
-    generatedBuffer = await generateImageWithWan(generatorModel, prompt, client);
+    generatedBuffer = await generateImageWithWan(
+      generatorModel,
+      prompt,
+      client
+    );
   } catch (error) {
     const parsed = parseHttpError(error);
-    console.warn(`⚠️ [Qwen-Image] 第一阶段生成失败: ${parsed.message} (status=${parsed.status || 'N/A'}, code=${parsed.code || 'N/A'})`);
+    console.warn(
+      `⚠️ [Qwen-Image] 第一阶段生成失败: ${parsed.message} (status=${
+        parsed.status || "N/A"
+      }, code=${parsed.code || "N/A"})`
+    );
     return null;
   }
 
   if (!generatedBuffer || generatedBuffer.length === 0) {
-    console.warn('⚠️ [Qwen-Image] 第一阶段生成为空，跳过两阶段策略');
+    console.warn("⚠️ [Qwen-Image] 第一阶段生成为空，跳过两阶段策略");
     return null;
   }
 
-  const tempPath = saveBufferAsTempPng(generatedBuffer, 'wan-generated');
+  const tempPath = saveBufferAsTempPng(generatedBuffer, "wan-generated");
   try {
     const enhanced = await enhanceImageWithQwen({
       baseImagePath: tempPath,
@@ -674,7 +802,7 @@ async function generateThenEnhanceWithQwen(params) {
     if (enhanced && enhanced.buffer && enhanced.buffer.length > 0) {
       return {
         buffer: enhanced.buffer,
-        provider: 'two-stage-qwen',
+        provider: "two-stage-qwen",
         model: enhancerModel,
         triedModels: [generatorModel, enhancerModel],
         pipeline: {
@@ -687,7 +815,7 @@ async function generateThenEnhanceWithQwen(params) {
 
     return {
       buffer: generatedBuffer,
-      provider: 'two-stage-qwen-fallback-stage1',
+      provider: "two-stage-qwen-fallback-stage1",
       model: generatorModel,
       triedModels: [generatorModel, enhancerModel],
       pipeline: {

@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { cartUtils } from '../utils/cart';
 import { getFirstImageUrl, getFallbackImageUrl } from '../utils/imageUtils';
+import { buildCategoryOptions, fetchProductSystem } from '../utils/productSystem';
 import { LucideIcon } from "../components/icons/lucide";
 import "./Shop.css";
 
@@ -17,6 +18,27 @@ const Shop = () => {
   const [category, setCategory] = useState('');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [categoryOptions, setCategoryOptions] = useState([
+    { value: 'T恤', label: 'T恤' },
+    { value: '手机壳', label: '手机壳' },
+    { value: '帆布袋', label: '帆布袋' },
+    { value: '明信片', label: '明信片' },
+    { value: '其他', label: '其他' },
+  ]);
+
+  useEffect(() => {
+    let mounted = true;
+    fetchProductSystem({ scene: 'shop' })
+      .then((data) => {
+        if (!mounted || !data?.products) return;
+        const options = buildCategoryOptions(data.products);
+        if (options.length) setCategoryOptions(options);
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
@@ -75,11 +97,9 @@ const Shop = () => {
           className="shop-categorySelect"
           allowClear
         >
-          <Option value="T恤">T恤</Option>
-          <Option value="手机壳">手机壳</Option>
-          <Option value="帆布袋">帆布袋</Option>
-          <Option value="明信片">明信片</Option>
-          <Option value="其他">其他</Option>
+          {categoryOptions.map((opt) => (
+            <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+          ))}
         </Select>
       </div>
 

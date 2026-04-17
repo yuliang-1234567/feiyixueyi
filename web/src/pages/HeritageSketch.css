@@ -95,6 +95,10 @@
   border-radius: 10px;
 }
 
+.heritage-continueBtn {
+  border-radius: 10px;
+}
+
 .heritage-toolbarBottom {
   display: flex;
   align-items: center;

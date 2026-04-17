@@ -3,6 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const sharp = require('sharp');
+const axios = require('axios');
 const { Op } = require('sequelize');
 const Artwork = require('../models/Artwork');
 const { sequelize } = require('../config/database');
@@ -10,6 +11,8 @@ const { authenticate } = require('../middleware/auth');
 const { generateQwenLearnAnalysis } = require('../utils/qwen');
 const { enhanceImageWithQwen, generateThenEnhanceWithQwen } = require('../utils/qwenImageEdit');
 const { getStylePrompt } = require('../utils/heritageStyleMap');
+const { STYLE_SYSTEM, getStylesForScene } = require('../utils/styleSystem');
+const { PRODUCT_SYSTEM, getProductsForScene, inferProductLabelFromText } = require('../utils/productSystem');
 const HeritageQaMessage = require('../models/HeritageQaMessage');
 const HeritageQuizQuestion = require('../models/HeritageQuizQuestion');
 const HeritageQuizSession = require('../models/HeritageQuizSession');
@@ -1367,13 +1370,13 @@ router.post('/quiz/questions/import-official', authenticate, async (req, res) =>
 });
 
 // 获取数字焕新预设产品列表（供前端选择产品底图，并说明引用资源目录）
-const PRODUCT_TEMPLATE_LIST = [
-  { type: 'T恤', name: 'T恤', file: 'tshirt.png' },
-  { type: '手机壳', name: '手机壳', file: 'phone-case.png' },
-  { type: '帆布袋', name: '帆布袋', file: 'bag.png' },
-  { type: '明信片', name: '明信片', file: 'postcard.png' },
-  { type: '马克杯', name: '马克杯', file: 'mug.png' },
-];
+const PRODUCT_TEMPLATE_LIST = getProductsForScene('transform')
+  .filter((p) => p.templateFile)
+  .map((p) => ({
+    type: p.label,
+    name: p.label,
+    file: p.templateFile,
+  }));
 router.get('/product-templates', (req, res) => {
   const forwardedProto = (req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
   const proto = forwardedProto || req.protocol;
@@ -1390,6 +1393,43 @@ router.get('/product-templates', (req, res) => {
         imageUrl: `${baseUrl}/uploads/product-templates/${t.file}`
       }))
     }
+  });
+});
+
+// 风格系统：为 Web/小程序提供统一的风格 key 与 label
+router.get('/style-system', (req, res) => {
+  const scene = String(req.query?.scene || '').trim();
+  const styles = scene ? getStylesForScene(scene) : STYLE_SYSTEM.styles;
+
+  return res.json({
+    success: true,
+    data: {
+      version: STYLE_SYSTEM.version,
+      styles: styles.map((s) => ({
+        key: s.key,
+        label: s.label,
+        scenes: s.scenes,
+      })),
+    },
+  });
+});
+
+// 产品系统：为 Web/小程序提供统一的产品 key 与 label（以及样机模板文件名）
+router.get('/product-system', (req, res) => {
+  const scene = String(req.query?.scene || '').trim();
+  const products = scene ? getProductsForScene(scene) : PRODUCT_SYSTEM.products;
+
+  return res.json({
+    success: true,
+    data: {
+      version: PRODUCT_SYSTEM.version,
+      products: products.map((p) => ({
+        key: p.key,
+        label: p.label,
+        scenes: p.scenes,
+        templateFile: p.templateFile,
+      })),
+    },
   });
 });
 
@@ -1482,7 +1522,9 @@ router.post('/generate-product', authenticate, async (req, res) => {
       config,
     } = req.body || {};
 
-    const normalizedProductType = String(productType || '').trim() || '其他';
+    const rawProductType = String(productType || '').trim();
+    const inferred = inferProductLabelFromText(`${rawProductType} ${description || ''}`);
+    const normalizedProductType = rawProductType || inferred || '其他';
     const category = (normalizedProductType && PRODUCT_CONFIGS[normalizedProductType]) ? normalizedProductType : '其他';
 
     console.log('🎯 [GenerateProduct] 收到请求:', {
@@ -1519,9 +1561,11 @@ router.post('/generate-product', authenticate, async (req, res) => {
     }
 
     const aiPromptParts = [
-      `请为「${category}」生成一张高质量电商效果图。`,
-      '要求：主体清晰、构图高级、细节丰富、质感真实、背景干净、无水印、无logo。',
-      '图案/画面主题：' + coreDesc,
+      `请生成一张「${category}」的高质量电商效果图（必须是清晰可辨识的${category}本体）。`,
+      '硬性要求：主体必须是对应产品本体；不要生成其他品类替代；不要变成插画海报；不要只生成图案特写。',
+      '画面要求：构图高级、细节丰富、质感真实、背景干净、无水印、无logo、无文字。',
+      '主题/纹样描述：' + coreDesc,
+      `再次强调：画面主体必须是${category}。`,
     ];
     if (heritageHint && String(heritageHint).trim()) {
       aiPromptParts.push('非遗灵感（可参考融入）：' + String(heritageHint).trim());
@@ -1555,11 +1599,30 @@ router.post('/generate-product', authenticate, async (req, res) => {
       resolvedCategory: category,
     });
 
-    const aiEnhanced = await generateThenEnhanceWithQwen({
-      productType: category,
-      stylePrompt,
-      aiPrompt: finalAiPrompt,
-    });
+    // 策略A（优先）：用产品样机做 image-edit，强约束产品类型外形（更稳定生成 T恤/手机壳等）
+    let aiEnhanced = null;
+    try {
+      aiEnhanced = await enhanceImageWithQwen({
+        baseImagePath: templatePath,
+        baseImageUrl: templatePublicUrl,
+        productType: category,
+        stylePrompt,
+        aiPrompt: finalAiPrompt,
+        config: customConfig,
+      });
+    } catch (e) {
+      console.warn('⚠️ [GenerateProduct] 样机 image-edit 失败，将回退两阶段策略:', e.message);
+      aiEnhanced = null;
+    }
+
+    // 策略B（回退）：纯文生图两阶段（wan2.6 生成 -> qwen 精修）
+    if (!aiEnhanced || !aiEnhanced.buffer) {
+      aiEnhanced = await generateThenEnhanceWithQwen({
+        productType: category,
+        stylePrompt,
+        aiPrompt: finalAiPrompt,
+      });
+    }
 
     if (!aiEnhanced || !aiEnhanced.buffer) {
       console.warn('⚠️ [GenerateProduct] AI 图像生成未返回有效结果:', {
@@ -1621,18 +1684,33 @@ router.post('/heritage-sketch-generate', authenticate, async (req, res) => {
       });
     }
 
-    const { sketchBase64, styleKey, customStylePrompt, description, referenceImageUrl } = req.body || {};
+    const {
+      sketchBase64,
+      sketchLayerBase64,
+      productImageUrl,
+      styleKey,
+      customStylePrompt,
+      description,
+      baseDescription,
+      currentDescription,
+      additionalDescription,
+      referenceImageUrl,
+    } = req.body || {};
 
-    const raw = String(sketchBase64 || '').trim();
-    if (!raw) {
+    const rawComposite = String(sketchBase64 || '').trim();
+    const rawLayer = String(sketchLayerBase64 || '').trim();
+    const productUrl = String(productImageUrl || '').trim();
+
+    // 兼容旧客户端：没有两图输入时仍允许用 composite 草图走老逻辑
+    if (!rawLayer && !rawComposite) {
       return res.status(400).json({
         success: false,
-        message: '请先提供草图 sketchBase64',
+        message: '请先提供草图 sketchBase64 或 sketchLayerBase64',
       });
     }
 
     const stylePrompt = getStylePrompt(styleKey, customStylePrompt);
-    const allowedStyleKeys = ['paper-cutting', 'blue-white-porcelain', 'embroidery', 'custom'];
+    const allowedStyleKeys = getStylesForScene('heritage-sketch').map((s) => s.key);
     if (!styleKey || !allowedStyleKeys.includes(styleKey)) {
       return res.status(400).json({
         success: false,
@@ -1640,50 +1718,98 @@ router.post('/heritage-sketch-generate', authenticate, async (req, res) => {
       });
     }
 
-    const match = raw.match(/^data:(.+);base64,(.+)$/);
-    const b64 = match ? match[2] : raw;
+    const parseBase64ToBuffer = (raw) => {
+      const cleaned = String(raw || '').trim();
+      if (!cleaned) return null;
+      const m = cleaned.match(/^data:(.+);base64,(.+)$/);
+      const b64 = m ? m[2] : cleaned;
+      try {
+        const buf = Buffer.from(b64, 'base64');
+        return buf && buf.length ? buf : null;
+      } catch {
+        return null;
+      }
+    };
 
-    let buffer;
-    try {
-      buffer = Buffer.from(b64, 'base64');
-    } catch {
-      buffer = null;
-    }
-    if (!buffer || !buffer.length) {
-      return res.status(400).json({
-        success: false,
-        message: '草图 base64 解析失败，请重试',
-      });
+    // 写入 composite 临时文件（用于兜底与旧链路）
+    let compositeBuffer = null;
+    let sketchFilePath = null;
+    let sketchPublicUrl = null;
+    if (rawComposite) {
+      compositeBuffer = parseBase64ToBuffer(rawComposite);
+      if (!compositeBuffer) {
+        return res.status(400).json({
+          success: false,
+          message: '草图 base64 解析失败，请重试',
+        });
+      }
+      const sketchFilename = `heritage-sketch-${Date.now()}-${Math.round(Math.random() * 1e9)}.png`;
+      sketchFilePath = path.join(tempUploadDir, sketchFilename);
+      await fs.promises.writeFile(sketchFilePath, compositeBuffer);
+
+      const forwardedProto = (req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
+      const proto = forwardedProto || req.protocol;
+      const baseUrl = `${proto}://${req.get('host')}`.replace(/\/$/, '');
+      sketchPublicUrl = `${baseUrl}/uploads/temp/${sketchFilename}`;
     }
 
-    // 写入临时草图文件（用于 enhanceImageWithQwen 的 baseImagePath）
-    const sketchFilename = `heritage-sketch-${Date.now()}-${Math.round(Math.random() * 1e9)}.png`;
-    const sketchFilePath = path.join(tempUploadDir, sketchFilename);
-    await fs.promises.writeFile(sketchFilePath, buffer);
-
-    // 构造可能可访问的公共 URL（用于可选的 URL 取图；私网/localhost 会被后端安全逻辑兜底成 data-url）
-    const forwardedProto = (req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
-    const proto = forwardedProto || req.protocol;
-    const baseUrl = `${proto}://${req.get('host')}`.replace(/\/$/, '');
-    const sketchPublicUrl = `${baseUrl}/uploads/temp/${sketchFilename}`;
-
-    const finalAiPromptParts = [
-      '请把用户草图转化为适合非遗文创的高质量纹样/纹理图。',
-      '要求：保留草图中的关键线稿与构图；纹样更清晰、更有层次；边缘干净；背景简洁；无文字无logo。',
-      '输出：适合作为产品纹样贴合的效果图（纹样不要被裁切，留出适当边界）。',
-    ];
-    if (description && String(description).trim()) {
-      finalAiPromptParts.push('产品描述：' + String(description).trim());
+    // 写入笔触层临时文件（透明底）
+    let layerFilePath = null;
+    if (rawLayer) {
+      const layerBuffer = parseBase64ToBuffer(rawLayer);
+      if (!layerBuffer) {
+        return res.status(400).json({
+          success: false,
+          message: '笔触层 base64 解析失败，请重试',
+        });
+      }
+      const layerFilename = `heritage-sketch-layer-${Date.now()}-${Math.round(Math.random() * 1e9)}.png`;
+      layerFilePath = path.join(tempUploadDir, layerFilename);
+      await fs.promises.writeFile(layerFilePath, layerBuffer);
     }
-    if (referenceImageUrl && String(referenceImageUrl).trim()) {
-      finalAiPromptParts.push('参考来源：用户从数字焕新迁移了已有产品效果图，请尽量保持主题连续性与产品语义一致。');
+
+    // 下载产品底图（迁移图 URL）
+    let productFilePath = null;
+    if (productUrl && /^https?:\/\//i.test(productUrl)) {
+      try {
+        const resp = await axios.get(productUrl, { responseType: 'arraybuffer', timeout: 45000 });
+        const buf = Buffer.from(resp.data);
+        if (buf && buf.length) {
+          const productFilename = `heritage-sketch-product-${Date.now()}-${Math.round(Math.random() * 1e9)}.png`;
+          productFilePath = path.join(tempUploadDir, productFilename);
+          await fs.promises.writeFile(productFilePath, buf);
+        }
+      } catch (e) {
+        console.warn('⚠️ [HeritageSketch] 产品底图下载失败，将回退到 composite 草图:', {
+          message: e.message,
+          productUrl,
+        });
+      }
     }
-    const finalAiPrompt = finalAiPromptParts.join('\n');
+
+    // 提示词：不做额外判断/推断，直接把前端传来的字段拼到一起交给模型
+    const finalAiPrompt = [
+      '请根据以下“前端原样提供的信息”生成一张新的高质量电商效果图（背景干净、无水印无文字、主体清晰）。',
+      `styleKey=${String(styleKey || '').trim()}`,
+      `customStylePrompt=${String(customStylePrompt || '').trim()}`,
+      `description=${String(description || '').trim()}`,
+      `baseDescription=${String(baseDescription || '').trim()}`,
+      `currentDescription=${String(currentDescription || '').trim()}`,
+      `additionalDescription=${String(additionalDescription || '').trim()}`,
+      `productImageUrl=${String(productImageUrl || '').trim()}`,
+      `referenceImageUrl=${String(referenceImageUrl || '').trim()}`,
+      `hasProductImage=${String(Boolean(productFilePath))}`,
+      `hasSketchLayer=${String(Boolean(layerFilePath))}`,
+    ].join('\n');
+
+    const basePathForAi = productFilePath || sketchFilePath;
+    const baseUrlForAi = productFilePath ? productUrl : sketchPublicUrl;
 
     const aiEnhanced = await enhanceImageWithQwen({
-      baseImagePath: sketchFilePath,
-      baseImageUrl: sketchPublicUrl,
-      productType: '非遗纹样',
+      baseImagePath: basePathForAi,
+      baseImageUrl: baseUrlForAi,
+      ...(layerFilePath ? { referenceImagePaths: [layerFilePath] } : {}),
+      productType: '文创产品',
       stylePrompt,
       aiPrompt: finalAiPrompt,
     });
@@ -1708,7 +1834,12 @@ router.post('/heritage-sketch-generate', authenticate, async (req, res) => {
     } else {
       const fallbackFilename = `heritage-sketch-fallback-${Date.now()}-${Math.round(Math.random() * 1e9)}.png`;
       const fallbackFilePath = path.join(artworksUploadDir, fallbackFilename);
-      await fs.promises.writeFile(fallbackFilePath, buffer);
+      // 兜底：优先返回 composite（若无则返回笔触层）
+      const fallbackBuf = compositeBuffer || (layerFilePath ? await fs.promises.readFile(layerFilePath) : null);
+      if (!fallbackBuf) {
+        return res.status(500).json({ success: false, message: '兜底图片不可用，请重试' });
+      }
+      await fs.promises.writeFile(fallbackFilePath, fallbackBuf);
       transformedImageUrl = `/uploads/artworks/${fallbackFilename}`;
     }
 

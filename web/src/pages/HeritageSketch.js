@@ -5,17 +5,11 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import SketchCanvas from '../components/SketchCanvas';
 import { getImageUrl } from '../utils/imageUtils';
+import { buildOptions, fetchStyleSystem } from '../utils/styleSystem';
 import { LucideIcon } from '../components/icons/lucide';
 import './HeritageSketch.css';
 
 const { TextArea } = Input;
-
-const STYLE_OPTIONS = [
-  { value: 'paper-cutting', label: '剪纸' },
-  { value: 'blue-white-porcelain', label: '青花瓷' },
-  { value: 'embroidery', label: '刺绣' },
-  { value: 'custom', label: '自定义' },
-];
 
 function HeritageSketch() {
   const navigate = useNavigate();
@@ -27,33 +21,57 @@ function HeritageSketch() {
   const [hasDrawing, setHasDrawing] = useState(false);
   const [styleKey, setStyleKey] = useState('paper-cutting');
   const [customStylePrompt, setCustomStylePrompt] = useState('');
+  const [styleOptions, setStyleOptions] = useState([
+    { value: 'paper-cutting', label: '剪纸' },
+    { value: 'blue-white-porcelain', label: '青花瓷' },
+    { value: 'embroidery', label: '刺绣' },
+    { value: 'custom', label: '自定义' },
+  ]);
 
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [previewImage, setPreviewImage] = useState('');
+  const [canvasBackgroundUrl, setCanvasBackgroundUrl] = useState('');
+  const [baseDescription, setBaseDescription] = useState('');
   const [saving, setSaving] = useState(false);
   const [artworkModalVisible, setArtworkModalVisible] = useState(false);
 
   const isCustomStyle = styleKey === 'custom';
   const description = Form.useWatch('description', form) || '';
+  const additionalDescription = Form.useWatch('additionalDescription', form) || '';
   const canGenerate = hasDrawing && String(description || '').trim() && !loading;
   const migrationState = location.state || {};
 
   const selectedStyleLabel = useMemo(() => {
-    return STYLE_OPTIONS.find((s) => s.value === styleKey)?.label || '自定义';
-  }, [styleKey]);
+    return styleOptions.find((s) => s.value === styleKey)?.label || '自定义';
+  }, [styleKey, styleOptions]);
+
+  useEffect(() => {
+    let mounted = true;
+    fetchStyleSystem({ scene: 'heritage-sketch' })
+      .then((data) => {
+        if (!mounted || !data?.styles) return;
+        const options = buildOptions(data.styles);
+        if (options.length) setStyleOptions(options);
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!migrationState) return;
     if (migrationState.sourceDescription) {
       form.setFieldsValue({ description: migrationState.sourceDescription });
+      setBaseDescription(migrationState.sourceDescription);
     }
     if (migrationState.sourceStylePrompt) {
       setCustomStylePrompt(String(migrationState.sourceStylePrompt || ''));
       setStyleKey('custom');
     }
     if (migrationState.sourceImageUrl) {
-      setPreviewImage(getImageUrl(migrationState.sourceImageUrl));
+      setCanvasBackgroundUrl(getImageUrl(migrationState.sourceImageUrl));
     }
   }, [form, migrationState]);
 
@@ -77,18 +95,27 @@ function HeritageSketch() {
       return;
     }
 
-    const sketchBase64 = sketchRef.current.exportBase64?.();
-    if (!sketchBase64) {
-      message.error('导出草图失败，请重试');
+    const sketchBase64 = sketchRef.current.exportBase64?.(); // 组合图（底图+笔触），用于兜底
+    const sketchLayerBase64 = sketchRef.current.exportStrokesBase64?.(); // 透明笔触层，用于“两图合成”
+    if (!sketchLayerBase64) {
+      message.error('导出笔触层失败，请重试');
       return;
     }
 
     setLoading(true);
     try {
+      const productImageUrl = migrationState.sourceImageUrl
+        ? getImageUrl(migrationState.sourceImageUrl)
+        : String(canvasBackgroundUrl || '').trim();
       const payload = {
         sketchBase64,
+        sketchLayerBase64,
+        productImageUrl,
         styleKey,
         description: String(description || '').trim(),
+        baseDescription: String(baseDescription || '').trim(),
+        currentDescription: String(description || '').trim(),
+        additionalDescription: String(additionalDescription || '').trim(),
         referenceImageUrl: migrationState.sourceImageUrl || '',
         ...(isCustomStyle ? { customStylePrompt: String(customStylePrompt || '').trim() } : {}),
       };
@@ -219,17 +246,43 @@ function HeritageSketch() {
                   生成效果
                 </Button>
                 {result ? (
-                  <Button
-                    icon={<LucideIcon icon={Save} />}
-                    loading={saving}
-                    onClick={() => setArtworkModalVisible(true)}
-                    className="heritage-saveBtn"
-                  >
-                    保存/发布
-                  </Button>
+                  <>
+                    <Button
+                      icon={<LucideIcon icon={Save} />}
+                      loading={saving}
+                      onClick={() => setArtworkModalVisible(true)}
+                      className="heritage-saveBtn"
+                    >
+                      保存/发布
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        if (!result?.transformedImageUrl) return;
+                        const nextBg = getImageUrl(result.transformedImageUrl);
+                        setCanvasBackgroundUrl(nextBg);
+                        setPreviewImage('');
+                        setResult(null);
+                        form.setFieldsValue({ additionalDescription: '' });
+                        message.success('已进入继续创作：生成图已作为新底图');
+                      }}
+                      className="heritage-continueBtn"
+                    >
+                      继续创作
+                    </Button>
+                  </>
                 ) : null}
               </div>
             </div>
+            <Form.Item
+              name="additionalDescription"
+              label="追加修改（可选）"
+              className="heritage-toolbarMainItem"
+            >
+              <TextArea
+                rows={2}
+                placeholder="例如：将笔墨当做树枝等符合场景的元素继续添加到T恤上；增强雪花纹样的天蓝色层次..."
+              />
+            </Form.Item>
             <div className="heritage-toolbarBottom">
               <div className="heritage-styleBlock">
                 <div className="heritage-inlineLabel">非遗风格</div>
@@ -239,7 +292,7 @@ function HeritageSketch() {
                     setStyleKey(next);
                     setResult(null);
                   }}
-                  options={STYLE_OPTIONS}
+                  options={styleOptions}
                   className="heritage-styleSelect"
                 />
               </div>
@@ -270,6 +323,7 @@ function HeritageSketch() {
               <div className="heritage-cardTitle">草图画布</div>
               <SketchCanvas
                 ref={sketchRef}
+                backgroundImageUrl={canvasBackgroundUrl}
                 onHasDrawingChange={(v) => {
                   setHasDrawing(Boolean(v));
                 }}
@@ -289,14 +343,14 @@ function HeritageSketch() {
                 ) : null}
               </div>
               <div className="heritage-previewBody">
-                {previewImage ? (
+                {result?.transformedImageUrl && previewImage ? (
                   <div className="heritage-previewImageWrap">
                     <img src={previewImage} alt="效果预览" className="heritage-previewImage" />
                   </div>
                 ) : (
                   <div className="heritage-previewPlaceholder">
                     <div className="heritage-previewPlaceholderInner">
-                      右侧将展示从数字焕新迁移过来的产品图，或你最新生成的效果图
+                      先从数字焕新迁移一张产品图到底图画布，或直接在空白画布上改稿；生成后右侧展示效果图。
                     </div>
                   </div>
                 )}
