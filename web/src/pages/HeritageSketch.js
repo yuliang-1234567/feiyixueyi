@@ -85,6 +85,28 @@ function HeritageSketch() {
     return '其他';
   };
 
+  const getAiModelDisplay = (data) => {
+    const ai = data?.ai;
+    if (!ai) {
+      return '未调用AI模型（本地兜底）';
+    }
+
+    const models = [];
+    const stage1 = ai.pipeline?.stage1;
+    const stage2 = ai.pipeline?.stage2;
+    const stage2Applied = Boolean(ai.pipeline?.stage2Applied);
+
+    if (stage1) models.push(stage1);
+    if (stage2Applied && stage2) models.push(stage2);
+    if (models.length === 0 && ai.model) models.push(ai.model);
+
+    const uniqueModels = [...new Set(models.filter(Boolean))];
+    if (uniqueModels.length === 0) {
+      return '未识别到模型';
+    }
+    return uniqueModels.join(' -> ');
+  };
+
   const handleGenerate = async () => {
     if (!sketchRef.current) {
       message.warning('画布尚未就绪，请稍后再试');
@@ -343,7 +365,14 @@ function HeritageSketch() {
                 ) : null}
               </div>
               <div className="heritage-previewBody">
-                {result?.transformedImageUrl && previewImage ? (
+                {result ? (
+                  <div className="heritage-modelBar">
+                    <span className="heritage-modelLabel">调用AI模型</span>
+                    <span className="heritage-modelValue">{getAiModelDisplay(result)}</span>
+                  </div>
+                ) : null}
+
+                {previewImage ? (
                   <div className="heritage-previewImageWrap">
                     <img src={previewImage} alt="效果预览" className="heritage-previewImage" />
                   </div>

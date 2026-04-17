@@ -5,8 +5,8 @@
 
 require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
 const bcrypt = require('bcryptjs');
-const { sequelize } = require('../config/database');
-const User = require('../models/User');
+const { sequelize } = require('../src/config/database');
+const User = require('../src/models/User');
 
 async function createTestUser() {
   try {
@@ -15,14 +15,14 @@ async function createTestUser() {
     console.log('✅ 数据库连接成功');
 
     // 导入模型
-    require('../models');
+    require('../src/models');
 
     // 创建测试用户
     const testUsers = [
       {
         username: 'admin',
         email: 'admin@example.com',
-        password: 'admin123',
+        password: 'admin666',
         role: 'admin'
       },
       {
@@ -49,7 +49,15 @@ async function createTestUser() {
         });
 
         if (existingUser) {
-          console.log(`⚠️  用户 ${userData.email} 已存在，跳过创建`);
+          if (userData.email === 'admin@example.com') {
+            existingUser.password = userData.password;
+            existingUser.role = 'admin';
+            existingUser.username = userData.username;
+            await existingUser.save();
+            console.log(`✅ 管理员账号已更新: ${userData.email} (${userData.role})`);
+          } else {
+            console.log(`⚠️  用户 ${userData.email} 已存在，跳过创建`);
+          }
         } else {
           // 创建用户（密码会在 hook 中自动加密）
           const user = await User.create(userData);
@@ -62,7 +70,7 @@ async function createTestUser() {
 
     console.log('\n✅ 测试用户创建完成');
     console.log('\n📋 测试账号信息:');
-    console.log('   管理员: admin@example.com / admin123');
+    console.log('   管理员: admin@example.com / admin666');
     console.log('   艺术家: artist1@example.com / admin123');
     console.log('   普通用户: user1@example.com / admin123');
 

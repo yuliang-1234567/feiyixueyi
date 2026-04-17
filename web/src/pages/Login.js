@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Card, Form, Input, Button, message, Checkbox, Typography, Alert } from 'antd';
+import { Card, Form, Input, Button, message, Checkbox, Typography, Alert, Tabs } from 'antd';
 import { Lock, Palette, User } from "lucide-react";
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -19,6 +19,7 @@ const Login = () => {
     if (typeof window === 'undefined') return false;
     return localStorage.getItem('auth-remember-me') === '1';
   });
+  const [loginType, setLoginType] = useState('user');
   
   // 检查URL参数中的过期信息
   const [expiredMessage, setExpiredMessage] = useState('');
@@ -77,7 +78,7 @@ const Login = () => {
 
       // 执行登录
       console.log('[Login Page] 调用 login 函数');
-      const result = await login(email.trim(), password);
+      const result = await login(email.trim(), password, loginType);
       console.log('[Login Page] 登录结果:', result);
 
       // 关闭加载提示
@@ -122,7 +123,11 @@ const Login = () => {
             isAuthenticated: finalState.isAuthenticated,
           });
           console.log('[Login Page] 跳转到:', fromPath);
-          navigate(fromPath, { replace: true });
+          const targetPath =
+            fromPath !== '/'
+              ? fromPath
+              : (loginType === 'admin' ? '/admin' : '/');
+          navigate(targetPath, { replace: true });
         }, 800);
       } else {
         // 显示错误消息
@@ -183,9 +188,29 @@ const Login = () => {
             </span>
           </Typography.Title>
           <Typography.Text type="secondary" style={{ fontSize: '15px', marginTop: '8px', display: 'block' }}>
-            登录您的账号以继续
+            请选择入口并登录
           </Typography.Text>
         </div>
+
+        <Tabs
+          activeKey={loginType}
+          onChange={(key) => setLoginType(key)}
+          items={[
+            { key: 'user', label: '用户登录' },
+            { key: 'admin', label: '管理员登录' },
+          ]}
+          style={{ marginBottom: 12 }}
+        />
+
+        {loginType === 'admin' ? (
+          <Alert
+            type="info"
+            showIcon
+            message="管理员入口"
+            description="仅管理员账号可登录此入口。"
+            style={{ marginBottom: 16 }}
+          />
+        ) : null}
         
         {expiredMessage && (
           <Alert
@@ -214,7 +239,7 @@ const Login = () => {
               { type: 'email', message: '请输入有效的邮箱地址!' },
             ]}
           >
-            <Input prefix={<LucideIcon icon={User} />} placeholder="邮箱" />
+            <Input prefix={<LucideIcon icon={User} />} placeholder={loginType === 'admin' ? '管理员邮箱' : '用户邮箱'} />
           </Form.Item>
 
           <Form.Item
@@ -224,7 +249,7 @@ const Login = () => {
               { min: 6, message: '密码至少需要 6 个字符' },
             ]}
           >
-            <Input.Password prefix={<LucideIcon icon={Lock} />} placeholder="密码" />
+            <Input.Password prefix={<LucideIcon icon={Lock} />} placeholder={loginType === 'admin' ? '管理员密码' : '用户密码'} />
           </Form.Item>
 
           <Form.Item name="remember" valuePropName="checked">
@@ -249,15 +274,17 @@ const Login = () => {
                 boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
               }}
             >
-              登录
+              {loginType === 'admin' ? '管理员登录' : '用户登录'}
             </Button>
           </Form.Item>
 
-          <Form.Item style={{ textAlign: 'center', marginBottom: 0 }}>
-            <Typography.Text type="secondary">
-              还没有账号？ <Link to="/register">立即注册</Link>
-            </Typography.Text>
-          </Form.Item>
+          {loginType === 'user' ? (
+            <Form.Item style={{ textAlign: 'center', marginBottom: 0 }}>
+              <Typography.Text type="secondary">
+                还没有账号？ <Link to="/register">立即注册</Link>
+              </Typography.Text>
+            </Form.Item>
+          ) : null}
         </Form>
       </Card>
     </div>

@@ -119,6 +119,44 @@ const Product = sequelize.define('Product', {
     type: DataTypes.TEXT,
     allowNull: true,
     comment: '文化寓意描述'
+  },
+  violationStatus: {
+    type: DataTypes.ENUM('normal', 'suspected', 'confirmed'),
+    allowNull: false,
+    defaultValue: 'normal',
+    comment: '违规状态'
+  },
+  reviewStatus: {
+    type: DataTypes.ENUM('pending', 'approved', 'rejected', 'reopened'),
+    allowNull: false,
+    defaultValue: 'pending',
+    comment: '复审状态'
+  },
+  reviewReason: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    comment: '复审备注'
+  },
+  offlineReason: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    comment: '违规下架原因'
+  },
+  reviewedBy: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    comment: '审核管理员ID'
+  },
+  reviewedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    comment: '审核时间'
+  },
+  rejectCount: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+    comment: '被驳回次数'
   }
 }, {
   tableName: 'products',

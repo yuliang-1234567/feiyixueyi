@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Form, Input, InputNumber, Modal, Select, Spin, Switch, Tag, message } from 'antd';
 import { PencilRuler, Save, Wand2 } from "lucide-react";
 import { useLocation, useNavigate } from 'react-router-dom';
-import api from '../utils/api';
+import api, { getUploadBaseUrl } from '../utils/api';
 import { buildOptions, fetchStyleSystem } from '../utils/styleSystem';
 import { buildProductOptions, fetchProductSystem } from '../utils/productSystem';
 import { useAuthStore } from '../store/authStore';
@@ -109,6 +109,28 @@ function Transform() {
     return style;
   };
 
+  const getAiModelDisplay = (data) => {
+    const ai = data?.ai;
+    if (!ai) {
+      return '未调用AI模型（本地兜底）';
+    }
+
+    const models = [];
+    const stage1 = ai.pipeline?.stage1;
+    const stage2 = ai.pipeline?.stage2;
+    const stage2Applied = Boolean(ai.pipeline?.stage2Applied);
+
+    if (stage1) models.push(stage1);
+    if (stage2Applied && stage2) models.push(stage2);
+    if (models.length === 0 && ai.model) models.push(ai.model);
+
+    const uniqueModels = [...new Set(models.filter(Boolean))];
+    if (uniqueModels.length === 0) {
+      return '未识别到模型';
+    }
+    return uniqueModels.join(' -> ');
+  };
+
   const handleGeneratePreview = async () => {
     const values = form.getFieldsValue();
     const description = String(values.description || '').trim();
@@ -132,8 +154,7 @@ function Transform() {
       if (response.data.success) {
         const data = response.data.data;
         setResult(data);
-        const baseUrl = process.env.REACT_APP_API_URL || 'https://feiyixueyi.cn/api';
-        const uploadBase = baseUrl.replace(/\/api\/?$/, '');
+        const uploadBase = getUploadBaseUrl();
         setPreviewImage(`${uploadBase}${data.transformedImageUrl}`);
         message.success('预览生成成功！');
         setTimeout(() => previewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 200);
@@ -433,6 +454,13 @@ function Transform() {
               ) : null}
             </div>
             <div className="preview-content preview-content-fixed">
+              {result ? (
+                <div className="preview-modelBar">
+                  <span className="preview-modelLabel">调用AI模型</span>
+                  <span className="preview-modelValue">{getAiModelDisplay(result)}</span>
+                </div>
+              ) : null}
+
               {previewImage ? (
                 <div className="preview-image-wrapper">
                   <img src={previewImage} alt="预览" className="preview-result-image" />

@@ -72,7 +72,7 @@ router.post('/register', async (req, res) => {
 // 登录
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, loginType } = req.body;
 
     console.log('🔐 [Auth] 登录请求:', { email, hasPassword: !!password });
 
@@ -118,6 +118,21 @@ router.post('/login', async (req, res) => {
     }
 
     console.log('✅ [Auth] 密码验证成功');
+
+    // 登录类型校验：管理员登录仅允许 admin，用户登录不允许 admin
+    if (loginType === 'admin' && user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: '该账号不是管理员，无法从管理员入口登录'
+      });
+    }
+
+    if (loginType === 'user' && user.role === 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: '管理员账号请使用管理员入口登录'
+      });
+    }
 
     // 生成token
     const token = jwt.sign(

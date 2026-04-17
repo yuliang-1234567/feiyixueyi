@@ -654,10 +654,22 @@
   padding: 12px;
 }
 
+.quiz-stem-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
 .quiz-stem {
   font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 10px;
+  margin-bottom: 0;
+}
+
+.quiz-favorite-btn {
+  flex-shrink: 0;
 }
 
 .quiz-options {
@@ -721,6 +733,11 @@
 
   .quiz-options {
     grid-template-columns: 1fr;
+  }
+
+  .quiz-stem-row {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .qa-meta {

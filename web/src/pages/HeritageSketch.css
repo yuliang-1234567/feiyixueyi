@@ -161,6 +161,30 @@
   border: 1px solid rgba(226, 232, 240, 0.9);
 }
 
+.heritage-modelBar {
+  margin: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.heritage-modelLabel {
+  color: #475569;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.heritage-modelValue {
+  color: #0f172a;
+  font-weight: 800;
+  font-size: 13px;
+}
+
 .heritage-previewImageWrap {
   width: 100%;
   height: 100%;

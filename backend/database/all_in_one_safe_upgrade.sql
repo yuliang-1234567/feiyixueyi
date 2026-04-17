@@ -123,6 +123,56 @@ SET @sql_stmt = IF(
 );
 PREPARE stmt FROM @sql_stmt; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
+-- product review/violation fields
+SET @sql_stmt = IF(
+  (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=@db_name AND TABLE_NAME='products' AND COLUMN_NAME='violationStatus') = 0,
+  'ALTER TABLE `products` ADD COLUMN `violationStatus` ENUM(''normal'', ''suspected'', ''confirmed'') NOT NULL DEFAULT ''normal'' COMMENT ''违规状态''',
+  'SELECT ''skip products.violationStatus'' AS msg'
+);
+PREPARE stmt FROM @sql_stmt; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql_stmt = IF(
+  (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=@db_name AND TABLE_NAME='products' AND COLUMN_NAME='reviewStatus') = 0,
+  'ALTER TABLE `products` ADD COLUMN `reviewStatus` ENUM(''pending'', ''approved'', ''rejected'', ''reopened'') NOT NULL DEFAULT ''pending'' COMMENT ''复审状态''',
+  'SELECT ''skip products.reviewStatus'' AS msg'
+);
+PREPARE stmt FROM @sql_stmt; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql_stmt = IF(
+  (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=@db_name AND TABLE_NAME='products' AND COLUMN_NAME='reviewReason') = 0,
+  'ALTER TABLE `products` ADD COLUMN `reviewReason` TEXT NULL COMMENT ''复审备注''',
+  'SELECT ''skip products.reviewReason'' AS msg'
+);
+PREPARE stmt FROM @sql_stmt; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql_stmt = IF(
+  (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=@db_name AND TABLE_NAME='products' AND COLUMN_NAME='offlineReason') = 0,
+  'ALTER TABLE `products` ADD COLUMN `offlineReason` TEXT NULL COMMENT ''违规下架原因''',
+  'SELECT ''skip products.offlineReason'' AS msg'
+);
+PREPARE stmt FROM @sql_stmt; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql_stmt = IF(
+  (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=@db_name AND TABLE_NAME='products' AND COLUMN_NAME='reviewedBy') = 0,
+  'ALTER TABLE `products` ADD COLUMN `reviewedBy` INT NULL COMMENT ''审核管理员ID''',
+  'SELECT ''skip products.reviewedBy'' AS msg'
+);
+PREPARE stmt FROM @sql_stmt; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql_stmt = IF(
+  (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=@db_name AND TABLE_NAME='products' AND COLUMN_NAME='reviewedAt') = 0,
+  'ALTER TABLE `products` ADD COLUMN `reviewedAt` DATETIME NULL COMMENT ''审核时间''',
+  'SELECT ''skip products.reviewedAt'' AS msg'
+);
+PREPARE stmt FROM @sql_stmt; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql_stmt = IF(
+  (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=@db_name AND TABLE_NAME='products' AND COLUMN_NAME='rejectCount') = 0,
+  'ALTER TABLE `products` ADD COLUMN `rejectCount` INT NOT NULL DEFAULT 0 COMMENT ''被驳回次数''',
+  'SELECT ''skip products.rejectCount'' AS msg'
+);
+PREPARE stmt FROM @sql_stmt; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
 -- products indexes
 SET @sql_stmt = IF(
   (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=@db_name AND TABLE_NAME='products' AND INDEX_NAME='idx_deleted') = 0,
