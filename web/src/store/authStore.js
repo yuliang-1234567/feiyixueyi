@@ -46,10 +46,10 @@ export const useAuthStore = create((set, get) => ({
   token: initialToken,
   isAuthenticated: !!initialUser && !!initialToken,
 
-  login: async (email, password) => {
+  login: async (email, password, loginType = 'user') => {
     try {
       console.log('🔐 [Login] 开始登录请求...', { email });
-      const response = await api.post('/auth/login', { email, password });
+      const response = await api.post('/auth/login', { email, password, loginType });
       console.log('🔐 [Login] API响应:', response.data);
 
       if (response.data && response.data.success) {

@@ -5,6 +5,7 @@ import {
   BookOpenText,
   ChevronRight,
   Crown,
+  Heart,
   FileText,
   Flame,
   Dumbbell,
@@ -339,6 +340,8 @@ const HeritageLearn = () => {
   const [quizQuestions, setQuizQuestions] = useState([]);
   const [quizAnswers, setQuizAnswers] = useState({});
   const [quizResult, setQuizResult] = useState(null);
+  const [quizFavoriteMap, setQuizFavoriteMap] = useState({});
+  const [favoriteTogglingMap, setFavoriteTogglingMap] = useState({});
 
   const handleCardClick = (item) => {
     setSelectedItem(item);
@@ -366,6 +369,8 @@ const HeritageLearn = () => {
     setQuizQuestions([]);
     setQuizAnswers({});
     setQuizResult(null);
+    setQuizFavoriteMap({});
+    setFavoriteTogglingMap({});
   };
 
   const loadQaHistory = async (categoryId = qaCategoryId) => {
@@ -441,8 +446,15 @@ const HeritageLearn = () => {
       });
       if (res.data?.success) {
         const payload = res.data.data || {};
+        const questions = payload.questions || [];
+        const initialFavoriteMap = {};
+        questions.forEach((item) => {
+          initialFavoriteMap[item.questionId] = Boolean(item.isFavorited);
+        });
         setQuizSessionId(payload.sessionId);
-        setQuizQuestions(payload.questions || []);
+        setQuizQuestions(questions);
+        setQuizFavoriteMap(initialFavoriteMap);
+        setFavoriteTogglingMap({});
         setQuizAnswers({});
         setQuizResult(null);
       } else {
@@ -551,6 +563,51 @@ const HeritageLearn = () => {
   const canSubmitQuiz =
     quizQuestions.length > 0 &&
     quizQuestions.every((item) => isSelectionValidForType(item, quizAnswers[item.questionId]));
+
+  const toggleQuestionFavorite = async (questionId) => {
+    if (!questionId) return;
+    if (requireLoginBeforeAction()) return;
+
+    setFavoriteTogglingMap((prev) => ({
+      ...prev,
+      [questionId]: true,
+    }));
+
+    try {
+      const res = await api.post('/ai/quiz/favorites/toggle', { questionId });
+      if (!res.data?.success) {
+        message.error(res.data?.message || '收藏操作失败');
+        return;
+      }
+
+      const isFavorited = Boolean(res.data?.data?.isFavorited);
+      setQuizFavoriteMap((prev) => ({
+        ...prev,
+        [questionId]: isFavorited,
+      }));
+      setQuizQuestions((prev) => prev.map((item) => (
+        item.questionId === questionId ? { ...item, isFavorited } : item
+      )));
+      setQuizResult((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          answers: (prev.answers || []).map((item) => (
+            item.questionId === questionId ? { ...item, isFavorited } : item
+          )),
+        };
+      });
+
+      message.success(isFavorited ? '收藏成功' : '已取消收藏');
+    } catch (error) {
+      message.error(error.response?.data?.message || '收藏操作失败，请稍后重试');
+    } finally {
+      setFavoriteTogglingMap((prev) => ({
+        ...prev,
+        [questionId]: false,
+      }));
+    }
+  };
 
   const tutorials = selectedItem
     ? TUTORIAL_RESOURCES[selectedItem.name] || []
@@ -789,21 +846,32 @@ const HeritageLearn = () => {
                   </div>
                   {quizQuestions.map((item) => (
                     <div key={item.questionId} className="quiz-question-item">
-                      <div className="quiz-stem">
-                        {item.number}. {item.stem}
-                        <Tag className="quiz-type-tag" color={
-                          item.questionType === "multiple"
-                            ? "purple"
-                            : item.questionType === "judge"
-                              ? "geekblue"
-                              : "gold"
-                        }>
-                          {item.questionType === "multiple"
-                            ? "多选题"
-                            : item.questionType === "judge"
-                              ? "判断题"
-                              : "单选题"}
-                        </Tag>
+                      <div className="quiz-stem-row">
+                        <div className="quiz-stem">
+                          {item.number}. {item.stem}
+                          <Tag className="quiz-type-tag" color={
+                            item.questionType === "multiple"
+                              ? "purple"
+                              : item.questionType === "judge"
+                                ? "geekblue"
+                                : "gold"
+                          }>
+                            {item.questionType === "multiple"
+                              ? "多选题"
+                              : item.questionType === "judge"
+                                ? "判断题"
+                                : "单选题"}
+                          </Tag>
+                        </div>
+                        <Button
+                          type={quizFavoriteMap[item.questionId] ? "primary" : "default"}
+                          className="quiz-favorite-btn"
+                          loading={Boolean(favoriteTogglingMap[item.questionId])}
+                          icon={<LucideIcon icon={Heart} />}
+                          onClick={() => toggleQuestionFavorite(item.questionId)}
+                        >
+                          {quizFavoriteMap[item.questionId] ? "已收藏" : "收藏"}
+                        </Button>
                       </div>
                       {item.questionType === "multiple" ? (
                         <Checkbox.Group
@@ -875,8 +943,19 @@ const HeritageLearn = () => {
                   <div className="quiz-result-list">
                     {(quizResult.answers || []).map((item, idx) => (
                       <div key={item.questionId} className="quiz-result-item">
-                        <div className="quiz-stem">
-                          {idx + 1}. {item.stem}
+                        <div className="quiz-stem-row">
+                          <div className="quiz-stem">
+                            {idx + 1}. {item.stem}
+                          </div>
+                          <Button
+                            type={quizFavoriteMap[item.questionId] ? "primary" : "default"}
+                            className="quiz-favorite-btn"
+                            loading={Boolean(favoriteTogglingMap[item.questionId])}
+                            icon={<LucideIcon icon={Heart} />}
+                            onClick={() => toggleQuestionFavorite(item.questionId)}
+                          >
+                            {quizFavoriteMap[item.questionId] ? "已收藏" : "收藏"}
+                          </Button>
                         </div>
                         <div className="quiz-result-line">
                           你的答案：{formatAnswerByType(item.questionType, item.selectedOption)}

@@ -1,14 +1,26 @@
 import axios from 'axios';
 
-const isDev = process.env.NODE_ENV === 'development';
-const isLocalHost =
-  typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname);
+const isLocalRuntime = (() => {
+  if (typeof window === 'undefined') return false;
+  const host = String(window.location.hostname || '').toLowerCase();
+  if (host === 'localhost' || host === '127.0.0.1') return true;
+  if (/^10\.\d+\.\d+\.\d+$/.test(host)) return true;
+  if (/^192\.168\.\d+\.\d+$/.test(host)) return true;
+  if (/^172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+$/.test(host)) return true;
+  return false;
+})();
 
-const API_BASE_URL = isDev
-  ? (isLocalHost
-      ? (process.env.REACT_APP_LOCAL_API_URL || 'http://localhost:3100/api')
-      : (process.env.REACT_APP_API_URL || 'https://feiyixueyi.cn/api'))
+const API_BASE_URL = isLocalRuntime
+  ? (process.env.REACT_APP_LOCAL_API_URL || 'http://localhost:3100/api')
   : (process.env.REACT_APP_API_URL || 'https://feiyixueyi.cn/api');
+
+export function getApiBaseUrl() {
+  return API_BASE_URL;
+}
+
+export function getUploadBaseUrl() {
+  return API_BASE_URL.replace(/\/api\/?$/, '');
+}
 
 const api = axios.create({
   baseURL: API_BASE_URL,

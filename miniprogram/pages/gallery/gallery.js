@@ -30,10 +30,44 @@ Page({
     hasMore: true
   },
 
+  async syncLocalFavoritesToBackend() {
+    const token = wx.getStorageSync('token');
+    if (!token) return;
+    if (this._favoriteSyncing) return;
+
+    const localFavoriteIds = getFavoriteIds();
+    if (!localFavoriteIds.length) return;
+
+    this._favoriteSyncing = true;
+    try {
+      const likesRes = await api.get('/artworks/me/likes', { page: 1, limit: 200 });
+      const serverLikes = likesRes?.data?.likes || [];
+      const serverIdSet = new Set(
+        (Array.isArray(serverLikes) ? serverLikes : [])
+          .map((item) => normalizeId(item?.id))
+          .filter(Boolean)
+      );
+
+      const missingOnServer = localFavoriteIds.filter((id) => !serverIdSet.has(id));
+      for (const id of missingOnServer) {
+        try {
+          await api.post(`/artworks/${id}/like`);
+        } catch (syncError) {
+          console.warn('同步单个收藏失败:', id, syncError?.message || syncError);
+        }
+      }
+    } catch (error) {
+      console.warn('同步本地收藏到后端失败:', error?.message || error);
+    } finally {
+      this._favoriteSyncing = false;
+    }
+  },
+
   onLoad(options) {
     if (options.category) {
       this.setData({ category: options.category });
     }
+    this.syncLocalFavoritesToBackend();
     this.loadArtworks();
   },
 
@@ -155,20 +189,68 @@ Page({
     const favoriteIds = getFavoriteIds();
     const exists = favoriteIds.includes(artworkId);
 
-    let nextIds;
-    if (exists) {
-      nextIds = favoriteIds.filter(id => id !== artworkId);
-    } else {
-      nextIds = [artworkId, ...favoriteIds];
-    }
-    wx.setStorageSync(FAVORITE_KEY, nextIds);
-
+    // 先做乐观更新，失败时回滚
     artworks[index].isFavorited = !exists;
     this.setData({ artworks });
 
-    wx.showToast({
-      title: exists ? '已取消收藏' : '收藏成功',
-      icon: 'none'
+    const rollback = () => {
+      const rolledBack = [...this.data.artworks];
+      const targetIndex = rolledBack.findIndex(item => normalizeId(item.id) === artworkId);
+      if (targetIndex >= 0) {
+        rolledBack[targetIndex].isFavorited = exists;
+        this.setData({ artworks: rolledBack });
+      }
+    };
+
+    api.post(`/artworks/${artworkId}/like`).then((res) => {
+      const isLiked = Boolean(res?.data?.isLiked);
+      const currentIds = getFavoriteIds();
+      const idSet = new Set(currentIds);
+      if (isLiked) {
+        idSet.add(artworkId);
+      } else {
+        idSet.delete(artworkId);
+      }
+      wx.setStorageSync(FAVORITE_KEY, Array.from(idSet));
+
+      const synced = [...this.data.artworks];
+      const targetIndex = synced.findIndex(item => normalizeId(item.id) === artworkId);
+      if (targetIndex >= 0) {
+        synced[targetIndex].isFavorited = isLiked;
+        if (typeof res?.data?.likes === 'number') {
+          synced[targetIndex].likesCount = res.data.likes;
+        }
+        this.setData({ artworks: synced });
+      }
+
+      wx.showToast({
+        title: isLiked ? '收藏成功' : '已取消收藏',
+        icon: 'none'
+      });
+    }).catch((error) => {
+      // 无登录/网络异常时，回退到本地收藏，不中断用户体验
+      const fallbackIds = getFavoriteIds();
+      const fallbackSet = new Set(fallbackIds);
+      if (exists) {
+        fallbackSet.delete(artworkId);
+      } else {
+        fallbackSet.add(artworkId);
+      }
+      wx.setStorageSync(FAVORITE_KEY, Array.from(fallbackSet));
+
+      rollback();
+      const fallbackArtworks = [...this.data.artworks];
+      const targetIndex = fallbackArtworks.findIndex(item => normalizeId(item.id) === artworkId);
+      if (targetIndex >= 0) {
+        fallbackArtworks[targetIndex].isFavorited = !exists;
+        this.setData({ artworks: fallbackArtworks });
+      }
+
+      console.warn('同步收藏到后端失败，已使用本地收藏兜底:', error?.message || error);
+      wx.showToast({
+        title: exists ? '已取消收藏(本地)' : '收藏成功(本地)',
+        icon: 'none'
+      });
     });
   }
 });

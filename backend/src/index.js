@@ -59,6 +59,7 @@ app.use('/api/ar', require('./routes/ar'));
 app.use('/api/home', require('./routes/home'));
 app.use('/api/subscriptions', require('./routes/subscriptions'));
 app.use('/api/news', require('./routes/news'));
+app.use('/api/admin', require('./routes/admin'));
 
 // 健康检查
 app.get('/api/health', (req, res) => {

@@ -5,15 +5,17 @@ const fs = require('fs');
 const sharp = require('sharp');
 const { Op } = require('sequelize');
 const Artwork = require('../models/Artwork');
+const AIInvocationLog = require('../models/AIInvocationLog');
 const { sequelize } = require('../config/database');
 const { authenticate } = require('../middleware/auth');
 const { generateQwenLearnAnalysis } = require('../utils/qwen');
-const { enhanceImageWithQwen, generateThenEnhanceWithQwen } = require('../utils/qwenImageEdit');
+const { enhanceImageWithQwen, generateThenEnhanceWithQwen, generateDirectImageFallback } = require('../utils/qwenImageEdit');
 const { getStylePrompt } = require('../utils/heritageStyleMap');
 const HeritageQaMessage = require('../models/HeritageQaMessage');
 const HeritageQuizQuestion = require('../models/HeritageQuizQuestion');
 const HeritageQuizSession = require('../models/HeritageQuizSession');
 const HeritageQuizSessionAnswer = require('../models/HeritageQuizSessionAnswer');
+const HeritageQuizFavorite = require('../models/HeritageQuizFavorite');
 const {
   getCategoryMeta,
   generateHeritageQaAnswer,
@@ -21,6 +23,84 @@ const {
 } = require('../utils/heritageQaQuiz');
 
 const router = express.Router();
+
+let ensureAiLogTablePromise = null;
+
+async function ensureAiLogTable() {
+  if (!ensureAiLogTablePromise) {
+    ensureAiLogTablePromise = AIInvocationLog.sync().catch((error) => {
+      ensureAiLogTablePromise = null;
+      throw error;
+    });
+  }
+  await ensureAiLogTablePromise;
+}
+
+function normalizeFailureReason(errorLike) {
+  const raw = String(
+    errorLike?.message ||
+    errorLike?.error ||
+    errorLike ||
+    ''
+  ).trim();
+  if (!raw) return 'unknown';
+  if (/rate|throttl|quota/i.test(raw)) return 'rate_limit';
+  if (/timeout|timed out|etimedout/i.test(raw)) return 'timeout';
+  if (/auth|unauthoriz|api key|forbidden|401|403/i.test(raw)) return 'auth_error';
+  if (/network|socket|connect|dns|econn/i.test(raw)) return 'network_error';
+  if (/invalid|bad request|参数|格式/i.test(raw)) return 'invalid_request';
+  return raw.slice(0, 200);
+}
+
+function getAiCostMap() {
+  const raw = String(process.env.AI_MODEL_COST_PER_CALL_JSON || '').trim();
+  if (!raw) {
+    return {
+      'qwen-image-edit-plus': 0.08,
+      'wan2.6-image': 0.1,
+      'qwen-image-2.0': 0.09,
+      'wanx-v1': 0.06,
+      'qwen-plus': 0.003,
+      'qwen-turbo': 0.0015,
+    };
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (error) {
+    return {};
+  }
+}
+
+function estimateCostCny(model) {
+  const map = getAiCostMap();
+  if (!model) return 0;
+  const val = Number(map[String(model)] || 0);
+  if (Number.isNaN(val) || val < 0) return 0;
+  return Number(val.toFixed(6));
+}
+
+async function logAiInvocation(payload = {}) {
+  try {
+    await ensureAiLogTable();
+    await AIInvocationLog.create({
+      userId: payload.userId || null,
+      feature: String(payload.feature || 'unknown'),
+      endpoint: String(payload.endpoint || 'unknown'),
+      provider: payload.provider ? String(payload.provider) : null,
+      model: payload.model ? String(payload.model) : null,
+      success: Boolean(payload.success),
+      latencyMs: Number(payload.latencyMs || 0),
+      downgraded: Boolean(payload.downgraded),
+      costCny: Number(payload.costCny || 0),
+      errorReason: payload.errorReason ? String(payload.errorReason) : null,
+      metadata: payload.metadata && typeof payload.metadata === 'object' ? payload.metadata : {},
+    });
+  } catch (error) {
+    console.warn('⚠️ [AI Monitor] 写入调用日志失败:', error.message);
+  }
+}
 
 // 简单内存限流：针对数字焕新 /transform 接口，按用户限流
 const TRANSFORM_RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 分钟窗口
@@ -32,6 +112,19 @@ const QUIZ_SUBMIT_RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const QUIZ_SUBMIT_RATE_LIMIT_MAX = 10;
 const qaRateBuckets = new Map();
 const quizSubmitRateBuckets = new Map();
+
+let ensureQuizFavoriteTablePromise = null;
+
+async function ensureQuizFavoriteTable() {
+  if (!ensureQuizFavoriteTablePromise) {
+    ensureQuizFavoriteTablePromise = HeritageQuizFavorite.sync().catch((error) => {
+      ensureQuizFavoriteTablePromise = null;
+      throw error;
+    });
+  }
+
+  await ensureQuizFavoriteTablePromise;
+}
 
 function checkUserRateLimit(bucketMap, userId, windowMs, maxCount) {
   if (!userId) {
@@ -831,6 +924,7 @@ async function fetchAiQuestionsWithFallback({
 
 // 自由问答：题目由用户输入，答案由通义千问实时生成
 router.post('/ask-heritage', authenticate, async (req, res) => {
+  const startMs = Date.now();
   try {
     const userId = req.user?.id;
     const rate = checkUserRateLimit(qaRateBuckets, userId, QA_RATE_LIMIT_WINDOW_MS, QA_RATE_LIMIT_MAX);
@@ -898,6 +992,18 @@ router.post('/ask-heritage', authenticate, async (req, res) => {
       }))
       .reverse();
 
+    await logAiInvocation({
+      userId: req.user?.id || null,
+      feature: 'heritage_qa',
+      endpoint: '/ai/ask-heritage',
+      provider: qaResult.provider || null,
+      model: qaResult.model || null,
+      success: true,
+      latencyMs: Date.now() - startMs,
+      downgraded: Boolean(String(qaResult.provider || '').includes('fallback')),
+      costCny: estimateCostCny(qaResult.model),
+    });
+
     return res.json({
       success: true,
       message: '问答完成',
@@ -919,6 +1025,18 @@ router.post('/ask-heritage', authenticate, async (req, res) => {
     });
   } catch (error) {
     console.error('❌ [Heritage QA] 接口失败:', error);
+    await logAiInvocation({
+      userId: req.user?.id || null,
+      feature: 'heritage_qa',
+      endpoint: '/ai/ask-heritage',
+      provider: null,
+      model: null,
+      success: false,
+      latencyMs: Date.now() - startMs,
+      downgraded: false,
+      costCny: 0,
+      errorReason: normalizeFailureReason(error),
+    });
     return res.status(500).json({
       success: false,
       message: '自由问答失败，请稍后重试',
@@ -1043,6 +1161,22 @@ router.get('/quiz/challenge/start', authenticate, async (req, res) => {
     }
 
     const questions = shuffleArray(publishedQuestions).slice(0, challengeCount);
+
+    let favoriteSet = new Set();
+    try {
+      await ensureQuizFavoriteTable();
+      const favoriteRows = await HeritageQuizFavorite.findAll({
+        where: {
+          userId,
+          questionId: { [Op.in]: questions.map((q) => q.id) },
+        },
+        attributes: ['questionId'],
+      });
+      favoriteSet = new Set(favoriteRows.map((item) => Number(item.questionId)));
+    } catch (favoriteError) {
+      console.warn('⚠️ [Heritage Quiz] 查询收藏状态失败:', favoriteError.message);
+    }
+
     const session = await HeritageQuizSession.create({
       userId,
       categoryId: category.id,
@@ -1076,6 +1210,7 @@ router.get('/quiz/challenge/start', authenticate, async (req, res) => {
           sourceType: item.sourceType,
           stem: item.stem,
           options: buildQuestionOptions(item),
+          isFavorited: favoriteSet.has(Number(item.id)),
         })),
       },
     });
@@ -1160,6 +1295,21 @@ router.post('/quiz/challenge/submit', authenticate, async (req, res) => {
       });
     }
 
+    let favoriteSet = new Set();
+    try {
+      await ensureQuizFavoriteTable();
+      const favoriteRows = await HeritageQuizFavorite.findAll({
+        where: {
+          userId,
+          questionId: { [Op.in]: sessionAnswerRows.map((item) => item.questionId) },
+        },
+        attributes: ['questionId'],
+      });
+      favoriteSet = new Set(favoriteRows.map((item) => Number(item.questionId)));
+    } catch (favoriteError) {
+      console.warn('⚠️ [Heritage Quiz] 查询收藏状态失败:', favoriteError.message);
+    }
+
     const answerMap = new Map();
     answers.forEach((item) => {
       const qid = Number(item.questionId);
@@ -1201,6 +1351,7 @@ router.post('/quiz/challenge/submit', authenticate, async (req, res) => {
         correctAnswer,
         isCorrect,
         explanation: question.explanation,
+        isFavorited: favoriteSet.has(Number(question.id)),
       });
     }
 
@@ -1230,6 +1381,150 @@ router.post('/quiz/challenge/submit', authenticate, async (req, res) => {
     return res.status(500).json({
       success: false,
       message: '闯关提交失败，请稍后重试',
+    });
+  }
+});
+
+router.post('/quiz/favorites/toggle', authenticate, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const questionId = Number(req.body?.questionId);
+
+    if (!questionId) {
+      return res.status(400).json({
+        success: false,
+        message: 'questionId 不能为空',
+      });
+    }
+
+    const question = await HeritageQuizQuestion.findByPk(questionId);
+    if (!question) {
+      return res.status(404).json({
+        success: false,
+        message: '题目不存在',
+      });
+    }
+
+    await ensureQuizFavoriteTable();
+
+    const exists = await HeritageQuizFavorite.findOne({
+      where: {
+        userId,
+        questionId,
+      },
+    });
+
+    if (exists) {
+      await exists.destroy();
+      return res.json({
+        success: true,
+        message: '已取消收藏',
+        data: {
+          questionId,
+          isFavorited: false,
+        },
+      });
+    }
+
+    await HeritageQuizFavorite.create({
+      userId,
+      questionId,
+    });
+
+    return res.json({
+      success: true,
+      message: '收藏成功',
+      data: {
+        questionId,
+        isFavorited: true,
+      },
+    });
+  } catch (error) {
+    console.error('❌ [Heritage Quiz] 收藏切换失败:', error);
+    return res.status(500).json({
+      success: false,
+      message: '收藏操作失败，请稍后重试',
+    });
+  }
+});
+
+router.get('/quiz/favorites', authenticate, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const page = Math.max(Number(req.query?.page) || 1, 1);
+    const limit = Math.max(1, Math.min(50, Number(req.query?.limit) || 10));
+    const offset = (page - 1) * limit;
+
+    const where = { userId };
+    await ensureQuizFavoriteTable();
+
+    const { count, rows } = await HeritageQuizFavorite.findAndCountAll({
+      where,
+      include: [
+        {
+          model: HeritageQuizQuestion,
+          as: 'question',
+          attributes: [
+            'id',
+            'categoryId',
+            'categoryName',
+            'difficulty',
+            'questionType',
+            'stem',
+            'optionA',
+            'optionB',
+            'optionC',
+            'optionD',
+            'optionE',
+            'optionF',
+            'sourceType',
+            'status',
+          ],
+          required: true,
+          where: req.query?.categoryId
+            ? { categoryId: String(req.query.categoryId).trim() }
+            : undefined,
+        },
+      ],
+      order: [['createdAt', 'DESC']],
+      limit,
+      offset,
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        list: rows.map((item) => ({
+          favoriteId: item.id,
+          questionId: item.questionId,
+          createdAt: item.createdAt,
+          question: item.question
+            ? {
+              id: item.question.id,
+              categoryId: item.question.categoryId,
+              categoryName: item.question.categoryName,
+              difficulty: item.question.difficulty,
+              questionType: item.question.questionType,
+              stem: item.question.stem,
+              sourceType: item.question.sourceType,
+              status: item.question.status,
+              options: buildQuestionOptions(item.question),
+            }
+            : null,
+        })),
+        pagination: {
+          page,
+          limit,
+          total: count,
+          totalPages: Math.ceil(count / limit),
+        },
+      },
+    });
+  } catch (error) {
+    console.error('❌ [Heritage Quiz] 获取收藏列表失败:', error);
+    return res.status(500).json({
+      success: false,
+      message: '获取收藏列表失败，请稍后重试',
     });
   }
 });
@@ -1464,6 +1759,7 @@ router.get('/public-image/:filename', (req, res) => {
 // 数字焕新（纯AI生成）：无需上传纹样/底图，基于产品样机 + 风格 + 描述直接生成效果图
 // 依赖 Qwen 图像模型；未配置 Key 时返回 503
 router.post('/generate-product', authenticate, async (req, res) => {
+  const startMs = Date.now();
   try {
     const rate = checkTransformRateLimit(req.user && req.user.id);
     if (!rate.allowed) {
@@ -1531,6 +1827,17 @@ router.post('/generate-product', authenticate, async (req, res) => {
     }
 
     const finalAiPrompt = aiPromptParts.join('\n');
+    const stage1GeneratePromptParts = [
+      `为「${category}」生成一张高质量商品效果图。`,
+      `主题：${coreDesc}`,
+    ];
+    if (heritageHint && String(heritageHint).trim()) {
+      stage1GeneratePromptParts.push(`非遗灵感：${String(heritageHint).trim()}`);
+    }
+    if (stylePrompt && String(stylePrompt).trim()) {
+      stage1GeneratePromptParts.push(`风格偏好：${String(stylePrompt).trim()}`);
+    }
+    const stage1GeneratePrompt = stage1GeneratePromptParts.join('\n');
 
     // 尽量提供公网 URL，减少 DashScope 抓取失败
     const forwardedProto = (req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
@@ -1555,53 +1862,119 @@ router.post('/generate-product', authenticate, async (req, res) => {
       resolvedCategory: category,
     });
 
-    const aiEnhanced = await generateThenEnhanceWithQwen({
-      productType: category,
-      stylePrompt,
-      aiPrompt: finalAiPrompt,
-    });
+    let aiEnhanced = null;
+    let aiError = null;
+    try {
+      aiEnhanced = await generateThenEnhanceWithQwen({
+        productType: category,
+        stylePrompt,
+        aiPrompt: stage1GeneratePrompt,
+      });
+    } catch (error) {
+      aiError = error;
+      console.warn('⚠️ [GenerateProduct] AI 调用异常，转本地兜底:', error.message);
+    }
 
-    if (!aiEnhanced || !aiEnhanced.buffer) {
-      console.warn('⚠️ [GenerateProduct] AI 图像生成未返回有效结果:', {
+    // 二级回退：两阶段链路失败时，直接使用 qwen-image-2.0/wan2.6 生图
+    if (!aiEnhanced) {
+      try {
+        aiEnhanced = await generateDirectImageFallback({
+          productType: category,
+          stylePrompt,
+          aiPrompt: finalAiPrompt,
+        });
+      } catch (error) {
+        aiError = aiError || error;
+        console.warn('⚠️ [GenerateProduct] 样机编辑增强失败，转本地兜底:', error.message);
+      }
+    }
+
+    let outputBuffer = null;
+    let outputSource = 'ai-generate';
+    let aiMeta = null;
+
+    if (aiEnhanced && aiEnhanced.buffer) {
+      outputBuffer = aiEnhanced.buffer;
+      aiMeta = {
+        provider: aiEnhanced.provider,
+        model: aiEnhanced.model,
+        triedModels: aiEnhanced.triedModels || [aiEnhanced.model],
+        pipeline: aiEnhanced.pipeline || null,
+      };
+
+      console.log('✅ [GenerateProduct] AI 图像生成成功:', {
+        userId: req.user?.id,
+        provider: aiEnhanced.provider || 'unknown',
+        model: aiEnhanced.model || 'unknown',
+        triedModels: aiEnhanced.triedModels || [aiEnhanced.model],
+      });
+    } else {
+      outputBuffer = await generateLocalProductFallbackImage({
+        templatePath,
+        category,
+        stylePrompt,
+        description: coreDesc,
+        heritageHint,
+        extraPrompt,
+      });
+      outputSource = 'local-template-fallback';
+
+      console.warn('⚠️ [GenerateProduct] 使用本地兜底图:', {
         userId: req.user?.id,
         hasAiApiKey,
         requestedProductType: normalizedProductType,
         resolvedCategory: category,
-      });
-      return res.status(503).json({
-        success: false,
-        message: '当前未配置或暂不可用的 AI 图像生成能力（请检查 QWEN_API_KEY / DASHSCOPE_API_KEY）',
+        aiError: aiError ? aiError.message : null,
       });
     }
 
-    const aiFilename = `transform-gen-${Date.now()}-${Math.round(Math.random() * 1E9)}.png`;
-    const aiFilePath = path.join(artworksUploadDir, aiFilename);
-    await fs.promises.writeFile(aiFilePath, aiEnhanced.buffer);
+    const outFilename = `transform-gen-${Date.now()}-${Math.round(Math.random() * 1E9)}.png`;
+    const outFilePath = path.join(artworksUploadDir, outFilename);
+    await fs.promises.writeFile(outFilePath, outputBuffer);
 
-    console.log('✅ [GenerateProduct] AI 图像生成成功:', {
-      userId: req.user?.id,
-      provider: aiEnhanced.provider || 'unknown',
-      model: aiEnhanced.model || 'unknown',
-      triedModels: aiEnhanced.triedModels || [aiEnhanced.model],
-      savedFile: aiFilename,
+    const aiCallSuccess = Boolean(aiMeta?.provider || aiMeta?.model);
+    const downgraded = !aiCallSuccess || Boolean(String(aiMeta?.provider || '').includes('fallback'));
+    await logAiInvocation({
+      userId: req.user?.id || null,
+      feature: 'generate_product',
+      endpoint: '/ai/generate-product',
+      provider: aiMeta?.provider || 'local-fallback',
+      model: aiMeta?.model || null,
+      success: aiCallSuccess,
+      latencyMs: Date.now() - startMs,
+      downgraded,
+      costCny: estimateCostCny(aiMeta?.model),
+      errorReason: aiCallSuccess ? null : normalizeFailureReason(aiError || 'local_fallback'),
+      metadata: {
+        transformSource: outputSource,
+        triedModels: aiMeta?.triedModels || [],
+      },
     });
 
     return res.json({
       success: true,
       message: '生成产品图成功',
       data: {
-        transformedImageUrl: `/uploads/artworks/${aiFilename}`,
+        transformedImageUrl: `/uploads/artworks/${outFilename}`,
         productType: category,
-        transformSource: 'ai-generate',
-        ai: {
-          provider: aiEnhanced.provider,
-          model: aiEnhanced.model,
-          triedModels: aiEnhanced.triedModels || [aiEnhanced.model],
-        },
+        transformSource: outputSource,
+        ai: aiMeta,
       },
     });
   } catch (error) {
     console.error('❌ [GenerateProduct] 生成失败:', { message: error.message, stack: error.stack });
+    await logAiInvocation({
+      userId: req.user?.id || null,
+      feature: 'generate_product',
+      endpoint: '/ai/generate-product',
+      provider: null,
+      model: null,
+      success: false,
+      latencyMs: Date.now() - startMs,
+      downgraded: false,
+      costCny: 0,
+      errorReason: normalizeFailureReason(error),
+    });
     return res.status(500).json({
       success: false,
       message: error.message || '生成失败，请稍后重试',
@@ -1612,6 +1985,7 @@ router.post('/generate-product', authenticate, async (req, res) => {
 
 // 一笔成纹：用户草图 + 非遗风格 -> 生成纹样/效果图（返回 1 张图片）
 router.post('/heritage-sketch-generate', authenticate, async (req, res) => {
+  const startMs = Date.now();
   try {
     const rate = checkHeritageSketchRateLimit(req.user && req.user.id);
     if (!rate.allowed) {
@@ -1680,13 +2054,25 @@ router.post('/heritage-sketch-generate', authenticate, async (req, res) => {
     }
     const finalAiPrompt = finalAiPromptParts.join('\n');
 
-    const aiEnhanced = await enhanceImageWithQwen({
-      baseImagePath: sketchFilePath,
-      baseImageUrl: sketchPublicUrl,
+    // 一笔成纹：严格优先两阶段（wan/qwen2 生图 -> qwen-edit 精修）
+    let aiEnhanced = await generateThenEnhanceWithQwen({
       productType: '非遗纹样',
       stylePrompt,
       aiPrompt: finalAiPrompt,
     });
+
+    // 两阶段失败时，直接 qwen-image-2.0 生图兜底
+    if (!aiEnhanced) {
+      try {
+        aiEnhanced = await generateDirectImageFallback({
+          productType: '非遗纹样',
+          stylePrompt,
+          aiPrompt: finalAiPrompt,
+        });
+      } catch (error) {
+        console.warn('⚠️ [HeritageSketch] qwen-image-2.0 直生图兜底失败:', error.message);
+      }
+    }
 
     // 无 key / 模型不可用时，enhanceImageWithQwen 会返回 null；此处兜底返回“草图本身”
     let transformedImageUrl = null;
@@ -1712,6 +2098,24 @@ router.post('/heritage-sketch-generate', authenticate, async (req, res) => {
       transformedImageUrl = `/uploads/artworks/${fallbackFilename}`;
     }
 
+    const aiCallSuccess = Boolean(aiMeta?.provider || aiMeta?.model);
+    await logAiInvocation({
+      userId: req.user?.id || null,
+      feature: 'heritage_sketch',
+      endpoint: '/ai/heritage-sketch-generate',
+      provider: aiMeta?.provider || 'sketch-fallback',
+      model: aiMeta?.model || null,
+      success: aiCallSuccess,
+      latencyMs: Date.now() - startMs,
+      downgraded: !aiCallSuccess,
+      costCny: estimateCostCny(aiMeta?.model),
+      errorReason: aiCallSuccess ? null : 'sketch_fallback',
+      metadata: {
+        transformSource,
+        triedModels: aiMeta?.triedModels || [],
+      },
+    });
+
     return res.json({
       success: true,
       message: '生成纹样成功',
@@ -1724,6 +2128,18 @@ router.post('/heritage-sketch-generate', authenticate, async (req, res) => {
     });
   } catch (error) {
     console.error('❌ [HeritageSketch] 生成失败:', { message: error.message, stack: error.stack });
+    await logAiInvocation({
+      userId: req.user?.id || null,
+      feature: 'heritage_sketch',
+      endpoint: '/ai/heritage-sketch-generate',
+      provider: null,
+      model: null,
+      success: false,
+      latencyMs: Date.now() - startMs,
+      downgraded: false,
+      costCny: 0,
+      errorReason: normalizeFailureReason(error),
+    });
     return res.status(500).json({
       success: false,
       message: error.message || '生成失败，请稍后重试',
@@ -1738,6 +2154,7 @@ router.post('/transform', authenticate, uploadTransform.fields([
   { name: 'pattern', maxCount: 1 },
   { name: 'product', maxCount: 1 }
 ]), async (req, res) => {
+  const startMs = Date.now();
   try {
     const { productType, config, aiPrompt, stylePrompt } = req.body || {};
     const patternFile = req.files && req.files.pattern && req.files.pattern[0];
@@ -1845,6 +2262,24 @@ router.post('/transform', authenticate, uploadTransform.fields([
       triedModels: aiMeta?.triedModels || [],
     });
 
+    const aiCallSuccess = Boolean(aiMeta?.provider || aiMeta?.model);
+    await logAiInvocation({
+      userId: req.user?.id || null,
+      feature: 'transform',
+      endpoint: '/ai/transform',
+      provider: aiMeta?.provider || 'local-fallback',
+      model: aiMeta?.model || null,
+      success: aiCallSuccess,
+      latencyMs: Date.now() - startMs,
+      downgraded: !aiCallSuccess,
+      costCny: estimateCostCny(aiMeta?.model),
+      errorReason: aiCallSuccess ? null : 'local_fallback',
+      metadata: {
+        transformSource,
+        triedModels: aiMeta?.triedModels || [],
+      },
+    });
+
     res.json({
       success: true,
       message: '生成产品图成功',
@@ -1857,6 +2292,18 @@ router.post('/transform', authenticate, uploadTransform.fields([
     });
   } catch (error) {
     console.error('❌ [Transform] 算法融合错误:', { message: error.message, stack: error.stack });
+    await logAiInvocation({
+      userId: req.user?.id || null,
+      feature: 'transform',
+      endpoint: '/ai/transform',
+      provider: null,
+      model: null,
+      success: false,
+      latencyMs: Date.now() - startMs,
+      downgraded: false,
+      costCny: 0,
+      errorReason: normalizeFailureReason(error),
+    });
     res.status(500).json({
       success: false,
       message: '生成产品图失败，请稍后重试',
@@ -2165,6 +2612,75 @@ function getProductTemplatePath(productType) {
   const fallbackPath = path.join(productTemplatesDir, DEFAULT_TEMPLATE_FILE);
   if (fs.existsSync(fallbackPath)) return fallbackPath;
   return null;
+}
+
+// 无 AI key 或模型不可用时，基于样机图生成可预览的本地兜底效果图
+async function generateLocalProductFallbackImage({
+  templatePath,
+  category,
+  stylePrompt,
+  description,
+  heritageHint,
+  extraPrompt,
+}) {
+  const base = sharp(templatePath).ensureAlpha();
+  const metadata = await base.metadata();
+  const width = metadata.width || 800;
+  const height = metadata.height || 800;
+
+  const seedText = [
+    category,
+    String(stylePrompt || ''),
+    String(description || ''),
+    String(heritageHint || ''),
+    String(extraPrompt || ''),
+  ].join('|');
+  const seed = hashString(seedText);
+
+  const palette = [
+    { r: 138, g: 98, b: 58 },
+    { r: 46, g: 91, b: 132 },
+    { r: 151, g: 74, b: 102 },
+    { r: 88, g: 110, b: 63 },
+  ];
+  const tintColor = palette[seed % palette.length];
+
+  const opacityA = 0.12 + ((seed % 10) / 100);
+  const opacityB = 0.1 + (((seed >> 3) % 10) / 100);
+  const circleX = 18 + (seed % 64);
+  const circleY = 24 + ((seed >> 2) % 52);
+  const circleR = 26 + ((seed >> 5) % 18);
+
+  const overlaySvg = `
+  <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="rgba(${tintColor.r},${tintColor.g},${tintColor.b},${opacityA})"/>
+        <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+      </linearGradient>
+      <radialGradient id="g2" cx="${circleX}%" cy="${circleY}%" r="${circleR}%">
+        <stop offset="0%" stop-color="rgba(${tintColor.r},${tintColor.g},${tintColor.b},${opacityB})"/>
+        <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+      </radialGradient>
+    </defs>
+    <rect x="0" y="0" width="${width}" height="${height}" fill="url(#g1)"/>
+    <rect x="0" y="0" width="${width}" height="${height}" fill="url(#g2)"/>
+    <g opacity="0.25" stroke="rgba(255,255,255,0.45)" stroke-width="2" fill="none">
+      <path d="M 0 ${Math.round(height * 0.2)} Q ${Math.round(width * 0.25)} ${Math.round(height * 0.08)} ${Math.round(width * 0.5)} ${Math.round(height * 0.2)} T ${width} ${Math.round(height * 0.2)}"/>
+      <path d="M 0 ${Math.round(height * 0.78)} Q ${Math.round(width * 0.25)} ${Math.round(height * 0.9)} ${Math.round(width * 0.5)} ${Math.round(height * 0.78)} T ${width} ${Math.round(height * 0.78)}"/>
+    </g>
+  </svg>`;
+
+  const buffer = await base
+    .modulate({
+      brightness: 1 + (((seed >> 1) % 9) - 4) / 100,
+      saturation: 1 + (((seed >> 4) % 13) - 6) / 100,
+    })
+    .composite([{ input: Buffer.from(overlaySvg), blend: 'over' }])
+    .png()
+    .toBuffer();
+
+  return buffer;
 }
 
 // 检测产品有效区域（通过分析透明度和颜色差异）

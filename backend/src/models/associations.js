@@ -16,6 +16,7 @@ const HeritageQaMessage = require('./HeritageQaMessage');
 const HeritageQuizQuestion = require('./HeritageQuizQuestion');
 const HeritageQuizSession = require('./HeritageQuizSession');
 const HeritageQuizSessionAnswer = require('./HeritageQuizSessionAnswer');
+const HeritageQuizFavorite = require('./HeritageQuizFavorite');
 
 // User 关联
 User.hasMany(Artwork, { foreignKey: 'authorId', as: 'artworks' });
@@ -107,6 +108,11 @@ HeritageQuizQuestion.hasMany(HeritageQuizSessionAnswer, {
   as: 'sessionAnswers'
 });
 
+User.hasMany(HeritageQuizFavorite, { foreignKey: 'userId', as: 'heritageQuizFavorites' });
+HeritageQuizFavorite.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+HeritageQuizQuestion.hasMany(HeritageQuizFavorite, { foreignKey: 'questionId', as: 'favorites' });
+HeritageQuizFavorite.belongsTo(HeritageQuizQuestion, { foreignKey: 'questionId', as: 'question' });
+
 module.exports = {
   User,
   Artwork,
@@ -124,6 +130,7 @@ module.exports = {
   HeritageQaMessage,
   HeritageQuizQuestion,
   HeritageQuizSession,
-  HeritageQuizSessionAnswer
+  HeritageQuizSessionAnswer,
+  HeritageQuizFavorite
 };
 

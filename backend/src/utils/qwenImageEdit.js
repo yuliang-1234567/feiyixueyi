@@ -2,7 +2,8 @@
  * 数字焕新图像增强（DashScope）
  *
  * 策略：
- * - 按模型性能顺序尝试：qwen-image-edit-plus > wanx-v1 > wan2.6-image
+ * - 生图优先：wan2.6-image > qwen-image-2.0（失败时兜底 qwen-image-2.0）
+ * - 精修优先：qwen-image-edit-plus（编辑能力）
  * - 每个模型按“OpenAI兼容接口 -> DashScope原生异步任务接口”双通道尝试
  * - 任一通道成功即返回；全部失败则业务层回退本地算法
  */
@@ -12,7 +13,7 @@ const path = require('path');
 const axios = require('axios');
 const OpenAI = require('openai');
 
-const DEFAULT_ALLOWED_MODELS = ['qwen-image-edit-plus', 'wan2.6-image', 'wanx-v1'];
+const DEFAULT_ALLOWED_MODELS = ['qwen-image-edit-plus', 'wan2.6-image', 'qwen-image-2.0', 'wanx-v1'];
 
 function parseAllowedModels() {
   const raw = String(process.env.QWEN_IMAGE_ALLOWED_MODELS || '').trim();
@@ -34,7 +35,7 @@ function isModelAllowed(model, allowedModels) {
 function getQwenImageConfig() {
   const apiKey = process.env.QWEN_API_KEY || process.env.DASHSCOPE_API_KEY;
   const baseURL = process.env.QWEN_BASE_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1';
-  const performanceOrder = ['qwen-image-edit-plus', 'wanx-v1', 'wan2.6-image'];
+  const performanceOrder = ['qwen-image-edit-plus', 'wan2.6-image', 'qwen-image-2.0', 'wanx-v1'];
   const modelChainRaw = process.env.QWEN_IMAGE_MODEL_CHAIN || process.env.TRANSFORM_QWEN_IMAGE_MODEL_CHAIN || '';
   const allowedModels = parseAllowedModels();
 
@@ -169,6 +170,15 @@ function extractTaskId(respData) {
 }
 
 function extractImageResultFromTask(data) {
+  const choiceContents = data?.output?.choices?.[0]?.message?.content;
+  if (Array.isArray(choiceContents)) {
+    for (const item of choiceContents) {
+      if (item?.image && typeof item.image === 'string') {
+        return { url: item.image };
+      }
+    }
+  }
+
   const candidates = [
     data?.output?.results,
     data?.output?.result,
@@ -217,8 +227,196 @@ function isQwenImageFamilyModel(model) {
   return /^qwen-image/i.test(String(model || ''));
 }
 
+function isWanFamilyModel(model) {
+  return /^wan/i.test(String(model || ''));
+}
+
 async function sleep(ms) {
   await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getGeneratorModelCandidates(allowedModels) {
+  const explicitModel = String(process.env.QWEN_IMAGE_GENERATE_MODEL || '').trim();
+  const chainRaw = String(
+    process.env.QWEN_IMAGE_GENERATE_MODEL_CHAIN ||
+    process.env.TRANSFORM_QWEN_IMAGE_GENERATE_MODEL_CHAIN ||
+    ''
+  ).trim();
+
+  const defaults = ['wan2.6-image', 'qwen-image-2.0', 'wanx-v1'];
+  const fromChain = chainRaw
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  const preferred = [];
+  if (explicitModel) preferred.push(explicitModel);
+  preferred.push(...fromChain);
+  if (preferred.length === 0) preferred.push(...defaults);
+
+  const deduped = [];
+  for (const model of preferred) {
+    if (!isModelAllowed(model, allowedModels)) continue;
+    if (!isWanFamilyModel(model) && model !== 'qwen-image-2.0') continue;
+    if (!deduped.includes(model)) deduped.push(model);
+  }
+
+  return deduped;
+}
+
+function getEnhancerModel(modelChain, allowedModels) {
+  const explicit = String(process.env.QWEN_IMAGE_ENHANCE_MODEL || '').trim();
+  if (explicit && isModelAllowed(explicit, allowedModels)) {
+    return explicit;
+  }
+
+  const candidates = [
+    'qwen-image-edit-plus',
+    ...modelChain,
+    ...allowedModels,
+  ];
+
+  for (const model of candidates) {
+    if (!isModelAllowed(model, allowedModels)) continue;
+    if (!isQwenImageFamilyModel(model)) continue;
+    return model;
+  }
+
+  return null;
+}
+
+function getTaskPollConfig() {
+  const maxPollsRaw = Number(process.env.QWEN_IMAGE_TASK_MAX_POLLS || 80);
+  const intervalMsRaw = Number(process.env.QWEN_IMAGE_TASK_POLL_INTERVAL_MS || 1500);
+  const maxPolls = Number.isFinite(maxPollsRaw) ? Math.max(1, Math.min(240, Math.floor(maxPollsRaw))) : 80;
+  const intervalMs = Number.isFinite(intervalMsRaw) ? Math.max(500, Math.min(5000, Math.floor(intervalMsRaw))) : 1500;
+  return { maxPolls, intervalMs };
+}
+
+async function resolveDashScopeImageFromSubmitData(submitData, apiKey, dashScopeOrigin) {
+  const { maxPolls, intervalMs } = getTaskPollConfig();
+  const immediate = extractImageResultFromTask(submitData);
+  if (immediate?.b64) return toBufferFromB64(immediate.b64);
+  if (immediate?.url) return toBufferFromUrl(immediate.url);
+
+  const taskId = extractTaskId(submitData);
+  if (!taskId) {
+    return null;
+  }
+
+  for (let i = 0; i < maxPolls; i++) {
+    const pollResp = await axios.get(`${dashScopeOrigin}/api/v1/tasks/${taskId}`, {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+      timeout: 30000,
+    });
+
+    const status = pollResp?.data?.output?.task_status || pollResp?.data?.output?.taskStatus;
+    if (status === 'SUCCEEDED') {
+      const extracted = extractImageResultFromTask(pollResp.data);
+      if (extracted?.b64) return toBufferFromB64(extracted.b64);
+      if (extracted?.url) return toBufferFromUrl(extracted.url);
+      return null;
+    }
+
+    if (status === 'FAILED' || status === 'CANCELED') {
+      return null;
+    }
+
+    await sleep(intervalMs);
+  }
+
+  return null;
+}
+
+async function generateImageWithDashScopeNative(model, prompt, apiKey, dashScopeOrigin) {
+  const headers = {
+    Authorization: `Bearer ${apiKey}`,
+    'Content-Type': 'application/json',
+    'X-DashScope-Async': 'enable',
+  };
+
+  const requestVariants = [
+    ...(model === 'wan2.6-image' ? [
+      {
+        name: 'image-generation.messages.interleave',
+        url: `${dashScopeOrigin}/api/v1/services/aigc/image-generation/generation`,
+        body: {
+          model,
+          input: {
+            messages: [
+              {
+                role: 'user',
+                content: [{ text: prompt }],
+              },
+            ],
+          },
+          parameters: { n: 1, size: '1024*1024', enable_interleave: true },
+        },
+      },
+    ] : []),
+    {
+      name: 'text2image.prompt',
+      url: `${dashScopeOrigin}/api/v1/services/aigc/text2image/image-synthesis`,
+      body: {
+        model,
+        input: { prompt },
+        parameters: { size: '1024*1024' },
+      },
+    },
+    {
+      name: 'text2image.text',
+      url: `${dashScopeOrigin}/api/v1/services/aigc/text2image/image-synthesis`,
+      body: {
+        model,
+        input: { text: prompt },
+        parameters: { size: '1024*1024' },
+      },
+    },
+    {
+      name: 'image-generation.prompt',
+      url: `${dashScopeOrigin}/api/v1/services/aigc/image-generation/generation`,
+      body: {
+        model,
+        input: { prompt },
+        parameters: { n: 1, size: '1024*1024' },
+      },
+    },
+  ];
+
+  let lastError = null;
+  for (const variant of requestVariants) {
+    try {
+      const submitResp = await axios.post(variant.url, variant.body, {
+        headers,
+        timeout: 45000,
+      });
+
+      const buffer = await resolveDashScopeImageFromSubmitData(submitResp.data, apiKey, dashScopeOrigin);
+      if (buffer && buffer.length > 0) {
+        console.log(`✅ [Qwen-Image] 原生文生图成功: model=${model}, variant=${variant.name}`);
+        return buffer;
+      }
+      console.warn(`⚠️ [Qwen-Image] 原生文生图为空: model=${model}, variant=${variant.name}`);
+    } catch (error) {
+      lastError = error;
+      const parsed = parseHttpError(error);
+      console.warn(`⚠️ [Qwen-Image] 原生文生图失败: model=${model}, variant=${variant.name}, status=${parsed.status || 'N/A'}, code=${parsed.code || 'N/A'}, requestId=${parsed.requestId || 'N/A'}, msg=${parsed.message}`);
+      if (isRateLimitCode(parsed.code)) {
+        const throttleError = new Error(parsed.message || 'DashScope 请求频率受限');
+        throttleError.stopChain = true;
+        throttleError.code = parsed.code;
+        throw throttleError;
+      }
+    }
+  }
+
+  if (lastError) {
+    throw lastError;
+  }
+
+  return null;
 }
 
 function tryRemoveFile(filePath) {
@@ -366,6 +564,7 @@ async function enhanceImageWithQwen(params) {
   };
 
   const tryDashScopeNativeTask = async (model) => {
+    const { maxPolls, intervalMs } = getTaskPollConfig();
     // 原生 image2image 接口对 URL 校验更严格；localhost/私网 URL 一律不要传，避免 SSRF/URL error
     const canUseUrl =
       baseImageUrl &&
@@ -476,7 +675,7 @@ async function enhanceImageWithQwen(params) {
       return null;
     }
 
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < maxPolls; i++) {
       const pollResp = await axios.get(`${dashScopeOrigin}/api/v1/tasks/${taskId}`, {
         headers: {
           Authorization: `Bearer ${apiKey}`,
@@ -496,7 +695,7 @@ async function enhanceImageWithQwen(params) {
         return null;
       }
 
-      await sleep(1500);
+      await sleep(intervalMs);
     }
 
     return null;
@@ -599,7 +798,7 @@ async function enhanceImageWithQwen(params) {
   return null;
 }
 
-async function generateImageWithWan(model, prompt, client) {
+async function generateImageWithCompatibleApi(model, prompt, client) {
   const result = await client.images.generate({
     model,
     prompt,
@@ -620,9 +819,9 @@ async function generateImageWithWan(model, prompt, client) {
 }
 
 /**
- * 两阶段策略：wan2.6-image 先生成，再用 qwen-image-edit-plus 精修。
- * - 第一阶段失败：返回 null
- * - 第二阶段失败：回退第一阶段结果
+ * 两阶段策略：先用 wan2.6-image / qwen-image-2.0 生图，再用 qwen-image-edit 精修。
+ * - 第一阶段全部失败：返回 null
+ * - 第二阶段失败：优先兜底 qwen-image-2.0；仍失败则回退第一阶段结果
  */
 async function generateThenEnhanceWithQwen(params) {
   const {
@@ -631,67 +830,186 @@ async function generateThenEnhanceWithQwen(params) {
     aiPrompt,
   } = params || {};
 
-  const { apiKey, baseURL, allowedModels } = getQwenImageConfig();
+  const { apiKey, baseURL, allowedModels, modelChain } = getQwenImageConfig();
   if (!apiKey || /^your_/i.test(apiKey)) {
     console.log('⚠️ [Qwen-Image] 未配置 QWEN_API_KEY，跳过两阶段图像生成');
     return null;
   }
 
-  const generatorModel = 'wan2.6-image';
-  const enhancerModel = 'qwen-image-edit-plus';
-  if (!isModelAllowed(generatorModel, allowedModels) || !isModelAllowed(enhancerModel, allowedModels)) {
-    console.warn('⚠️ [Qwen-Image] 两阶段模型不在 allowlist，已跳过');
+  const generatorCandidates = getGeneratorModelCandidates(allowedModels);
+  const enhancerModel = getEnhancerModel(modelChain, allowedModels);
+  if (generatorCandidates.length === 0 || !enhancerModel) {
+    console.warn('⚠️ [Qwen-Image] 两阶段候选模型为空（可能被 allowlist 过滤），已跳过');
     return null;
   }
 
   const client = new OpenAI({ apiKey, baseURL });
+  const dashScopeOrigin = getDashScopeOrigin(baseURL);
   const prompt = buildEditPrompt({ productType, stylePrompt, aiPrompt });
+  const directFallbackModel = 'qwen-image-2.0';
+  const directFallbackEnabled = isModelAllowed(directFallbackModel, allowedModels);
 
   let generatedBuffer = null;
-  try {
-    generatedBuffer = await generateImageWithWan(generatorModel, prompt, client);
-  } catch (error) {
-    const parsed = parseHttpError(error);
-    console.warn(`⚠️ [Qwen-Image] 第一阶段生成失败: ${parsed.message} (status=${parsed.status || 'N/A'}, code=${parsed.code || 'N/A'})`);
-    return null;
+  let stage1Model = null;
+  let stage1Provider = null;
+  const triedStage1Models = [];
+
+  for (const generatorModel of generatorCandidates) {
+    triedStage1Models.push(generatorModel);
+
+    try {
+      generatedBuffer = await generateImageWithDashScopeNative(
+        generatorModel,
+        prompt,
+        apiKey,
+        dashScopeOrigin
+      );
+      if (generatedBuffer && generatedBuffer.length > 0) {
+        stage1Model = generatorModel;
+        stage1Provider = 'dashscope-native-text2image';
+        break;
+      }
+    } catch (error) {
+      if (error?.stopChain) {
+        console.warn('⚠️ [Qwen-Image] 第一阶段命中频率限制，停止后续模型尝试');
+        break;
+      }
+
+      const parsed = parseHttpError(error);
+      console.warn(`⚠️ [Qwen-Image] 第一阶段原生通道失败: model=${generatorModel}, ${parsed.message} (status=${parsed.status || 'N/A'}, code=${parsed.code || 'N/A'})`);
+    }
+
+    if (!generatedBuffer) {
+      try {
+        generatedBuffer = await generateImageWithCompatibleApi(generatorModel, prompt, client);
+        if (generatedBuffer && generatedBuffer.length > 0) {
+          stage1Model = generatorModel;
+          stage1Provider = 'dashscope-openai-generate';
+          break;
+        }
+      } catch (error) {
+        const parsed = parseHttpError(error);
+        console.warn(`⚠️ [Qwen-Image] 第一阶段兼容通道失败: model=${generatorModel}, ${parsed.message} (status=${parsed.status || 'N/A'}, code=${parsed.code || 'N/A'})`);
+      }
+    }
+  }
+
+  if ((!generatedBuffer || generatedBuffer.length === 0) && directFallbackEnabled && !triedStage1Models.includes(directFallbackModel)) {
+    triedStage1Models.push(directFallbackModel);
+    try {
+      generatedBuffer = await generateImageWithDashScopeNative(
+        directFallbackModel,
+        prompt,
+        apiKey,
+        dashScopeOrigin
+      );
+      if (generatedBuffer && generatedBuffer.length > 0) {
+        stage1Model = directFallbackModel;
+        stage1Provider = 'dashscope-native-text2image-fallback';
+      }
+    } catch (error) {
+      const parsed = parseHttpError(error);
+      console.warn(`⚠️ [Qwen-Image] 兜底生图原生通道失败: model=${directFallbackModel}, ${parsed.message} (status=${parsed.status || 'N/A'}, code=${parsed.code || 'N/A'})`);
+    }
+
+    if (!generatedBuffer) {
+      try {
+        generatedBuffer = await generateImageWithCompatibleApi(directFallbackModel, prompt, client);
+        if (generatedBuffer && generatedBuffer.length > 0) {
+          stage1Model = directFallbackModel;
+          stage1Provider = 'dashscope-openai-generate-fallback';
+        }
+      } catch (error) {
+        const parsed = parseHttpError(error);
+        console.warn(`⚠️ [Qwen-Image] 兜底生图兼容通道失败: model=${directFallbackModel}, ${parsed.message} (status=${parsed.status || 'N/A'}, code=${parsed.code || 'N/A'})`);
+      }
+    }
   }
 
   if (!generatedBuffer || generatedBuffer.length === 0) {
-    console.warn('⚠️ [Qwen-Image] 第一阶段生成为空，跳过两阶段策略');
+    console.warn('⚠️ [Qwen-Image] 第一阶段所有候选模型生成失败，跳过两阶段策略');
     return null;
   }
 
   const tempPath = saveBufferAsTempPng(generatedBuffer, 'wan-generated');
   try {
-    const enhanced = await enhanceImageWithQwen({
-      baseImagePath: tempPath,
-      productType,
-      stylePrompt,
-      aiPrompt: `${prompt}\n请在不改变主体语义的前提下，进一步提升清晰度、细节层次、材质质感和边缘干净度。`,
-      modelChain: [enhancerModel],
-    });
+    let enhanced = null;
+    try {
+      enhanced = await enhanceImageWithQwen({
+        baseImagePath: tempPath,
+        productType,
+        stylePrompt,
+        aiPrompt: `${prompt}\n请在不改变主体语义的前提下，进一步提升清晰度、细节层次、材质质感和边缘干净度。`,
+        modelChain: [enhancerModel],
+      });
+    } catch (error) {
+      const parsed = parseHttpError(error);
+      console.warn(`⚠️ [Qwen-Image] 第二阶段精修失败，将尝试 qwen-image-2.0 兜底: ${parsed.message}`);
+    }
 
     if (enhanced && enhanced.buffer && enhanced.buffer.length > 0) {
       return {
         buffer: enhanced.buffer,
         provider: 'two-stage-qwen',
         model: enhancerModel,
-        triedModels: [generatorModel, enhancerModel],
+        triedModels: [...triedStage1Models, enhancerModel],
         pipeline: {
-          stage1: generatorModel,
+          stage1: stage1Model,
+          stage1Provider,
           stage2: enhancerModel,
           stage2Applied: true,
         },
       };
     }
 
+    if (directFallbackEnabled && stage1Model !== directFallbackModel) {
+      let directBuffer = null;
+      try {
+        directBuffer = await generateImageWithDashScopeNative(
+          directFallbackModel,
+          prompt,
+          apiKey,
+          dashScopeOrigin
+        );
+      } catch (error) {
+        const parsed = parseHttpError(error);
+        console.warn(`⚠️ [Qwen-Image] 第二阶段失败后 qwen-image-2.0 原生兜底失败: ${parsed.message}`);
+      }
+
+      if (!directBuffer) {
+        try {
+          directBuffer = await generateImageWithCompatibleApi(directFallbackModel, prompt, client);
+        } catch (error) {
+          const parsed = parseHttpError(error);
+          console.warn(`⚠️ [Qwen-Image] 第二阶段失败后 qwen-image-2.0 兼容兜底失败: ${parsed.message}`);
+        }
+      }
+
+      if (directBuffer && directBuffer.length > 0) {
+        return {
+          buffer: directBuffer,
+          provider: 'two-stage-fallback-qwen-image-2.0',
+          model: directFallbackModel,
+          triedModels: [...triedStage1Models, enhancerModel, directFallbackModel],
+          pipeline: {
+            stage1: stage1Model,
+            stage1Provider,
+            stage2: enhancerModel,
+            stage2Applied: false,
+            fallbackDirect: directFallbackModel,
+          },
+        };
+      }
+    }
+
     return {
       buffer: generatedBuffer,
       provider: 'two-stage-qwen-fallback-stage1',
-      model: generatorModel,
-      triedModels: [generatorModel, enhancerModel],
+      model: stage1Model,
+      triedModels: [...triedStage1Models, enhancerModel],
       pipeline: {
-        stage1: generatorModel,
+        stage1: stage1Model,
+        stage1Provider,
         stage2: enhancerModel,
         stage2Applied: false,
       },
@@ -701,7 +1019,74 @@ async function generateThenEnhanceWithQwen(params) {
   }
 }
 
+/**
+ * 直接生图兜底：优先 qwen-image-2.0，其次 wan2.6-image
+ */
+async function generateDirectImageFallback(params) {
+  const {
+    productType,
+    stylePrompt,
+    aiPrompt,
+  } = params || {};
+
+  const { apiKey, baseURL, allowedModels } = getQwenImageConfig();
+  if (!apiKey || /^your_/i.test(apiKey)) {
+    return null;
+  }
+
+  const client = new OpenAI({ apiKey, baseURL });
+  const dashScopeOrigin = getDashScopeOrigin(baseURL);
+  const prompt = buildEditPrompt({ productType, stylePrompt, aiPrompt });
+
+  const candidates = ['qwen-image-2.0', 'wan2.6-image'];
+  const triedModels = [];
+
+  for (const model of candidates) {
+    if (!isModelAllowed(model, allowedModels)) continue;
+    triedModels.push(model);
+
+    try {
+      const nativeBuffer = await generateImageWithDashScopeNative(model, prompt, apiKey, dashScopeOrigin);
+      if (nativeBuffer && nativeBuffer.length > 0) {
+        return {
+          buffer: nativeBuffer,
+          provider: 'direct-fallback-native',
+          model,
+          triedModels,
+          pipeline: {
+            directFallback: true,
+          },
+        };
+      }
+    } catch (error) {
+      const parsed = parseHttpError(error);
+      console.warn(`⚠️ [Qwen-Image] 直接生图原生失败: model=${model}, ${parsed.message}`);
+    }
+
+    try {
+      const compatBuffer = await generateImageWithCompatibleApi(model, prompt, client);
+      if (compatBuffer && compatBuffer.length > 0) {
+        return {
+          buffer: compatBuffer,
+          provider: 'direct-fallback-compatible',
+          model,
+          triedModels,
+          pipeline: {
+            directFallback: true,
+          },
+        };
+      }
+    } catch (error) {
+      const parsed = parseHttpError(error);
+      console.warn(`⚠️ [Qwen-Image] 直接生图兼容失败: model=${model}, ${parsed.message}`);
+    }
+  }
+
+  return null;
+}
+
 module.exports = {
   enhanceImageWithQwen,
   generateThenEnhanceWithQwen,
+  generateDirectImageFallback,
 };
