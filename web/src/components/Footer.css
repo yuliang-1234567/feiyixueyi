@@ -116,6 +116,42 @@
   font-size: 14px;
 }
 
+.footer-qrRow {
+  align-items: flex-start;
+}
+
+.footer-qrBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.72);
+  max-width: 220px;
+}
+
+.footer-qrTitle {
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.footer-qrImage {
+  width: 140px;
+  height: 140px;
+  border-radius: 10px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  background: #fff;
+  object-fit: cover;
+}
+
+.footer-qrHint {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
 .contact-icon {
   color: var(--accent-color);
   font-size: 16px;

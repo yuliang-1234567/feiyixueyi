@@ -68,6 +68,14 @@ const Footer = () => {
                 <LucideIcon icon={MapPin} className="contact-icon" />
                 <span>湖北省武汉市</span>
               </li>
+              <li className="footer-qrRow">
+                  <img
+                    className="footer-qrImage"
+                    src={`${process.env.PUBLIC_URL || ''}/images/miniapp-qr.png`}
+                    alt="小程序二维码"
+                    loading="lazy"
+                  />
+              </li>
             </ul>
           </Col>
         </Row>
