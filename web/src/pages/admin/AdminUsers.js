@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, Button, Card, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag, message } from 'antd';
 import adminApi from '../../utils/adminApi';
+import AdminPageHeader from '../../components/admin/AdminPageHeader';
 
 const roleColors = {
   admin: 'red',
@@ -138,25 +139,28 @@ const AdminUsers = () => {
   ];
 
   return (
-    <Card
-      title="用户管理"
-      extra={(
-        <Space>
+    <div>
+      <AdminPageHeader
+        title="用户管理"
+        description="账号、角色与基础数据维护"
+        extra={(
           <Button type="primary" onClick={() => setCreateModalOpen(true)}>
             添加用户
           </Button>
-        </Space>
-      )}
-    >
-      {error ? <Alert type="error" showIcon message={error} style={{ marginBottom: 16 }} /> : null}
-      <Table
-        rowKey="id"
-        loading={loading}
-        columns={columns}
-        dataSource={data}
-        pagination={pagination}
-        onChange={(pager) => loadData(pager.current, pager.pageSize)}
+        )}
       />
+
+      <Card>
+        {error ? <Alert type="error" showIcon message={error} style={{ marginBottom: 16 }} /> : null}
+        <Table
+          rowKey="id"
+          loading={loading}
+          columns={columns}
+          dataSource={data}
+          pagination={pagination}
+          onChange={(pager) => loadData(pager.current, pager.pageSize)}
+        />
+      </Card>
 
       <Modal
         title="添加用户"
@@ -221,7 +225,7 @@ const AdminUsers = () => {
           </Form.Item>
         </Form>
       </Modal>
-    </Card>
+    </div>
   );
 };
 

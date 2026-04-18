@@ -2,9 +2,11 @@ import React, { useEffect, useState } from 'react';
 import {
   Button,
   Card,
+  Col,
   Image,
   Input,
   Popconfirm,
+  Row,
   Select,
   Space,
   Table,
@@ -12,6 +14,7 @@ import {
   message,
 } from 'antd';
 import adminApi from '../../utils/adminApi';
+import AdminPageHeader from '../../components/admin/AdminPageHeader';
 
 const { Search } = Input;
 
@@ -194,49 +197,65 @@ const AdminArtworks = () => {
   ];
 
   return (
-    <Card title="作品管理（P0）">
-      <Space style={{ marginBottom: 16 }} wrap>
-        <Search
-          allowClear
-          placeholder="搜索标题/描述"
-          style={{ width: 260 }}
-          value={filters.keyword}
-          onChange={(e) => setFilters((prev) => ({ ...prev, keyword: e.target.value }))}
-          onSearch={handleQuery}
-        />
-        <Select
-          allowClear
-          placeholder="状态"
-          style={{ width: 140 }}
-          value={filters.status}
-          onChange={(value) => setFilters((prev) => ({ ...prev, status: value || undefined }))}
-          options={[
-            { value: 'published', label: '已发布' },
-            { value: 'draft', label: '草稿' },
-            { value: 'hidden', label: '已隐藏' },
-          ]}
-        />
-        <Select
-          allowClear
-          placeholder="分类"
-          style={{ width: 140 }}
-          value={filters.category}
-          onChange={(value) => setFilters((prev) => ({ ...prev, category: value || undefined }))}
-          options={categoryOptions.map((item) => ({ value: item, label: item }))}
-        />
-        <Button type="primary" onClick={handleQuery}>查询</Button>
-        <Button onClick={handleReset}>重置</Button>
-      </Space>
-
-      <Table
-        rowKey="id"
-        loading={loading}
-        columns={columns}
-        dataSource={dataSource}
-        pagination={pagination}
-        onChange={(pager) => fetchList(pager.current, pager.pageSize, filters)}
+    <div>
+      <AdminPageHeader
+        title="作品管理"
+        description="审核、状态流转与内容安全的核心入口"
       />
-    </Card>
+
+      <Card>
+        <Row gutter={[12, 12]} align="middle" style={{ marginBottom: 12 }}>
+          <Col xs={24} md={10} lg={8}>
+            <Search
+              allowClear
+              placeholder="搜索标题/描述"
+              value={filters.keyword}
+              onChange={(e) => setFilters((prev) => ({ ...prev, keyword: e.target.value }))}
+              onSearch={handleQuery}
+            />
+          </Col>
+          <Col xs={12} md={7} lg={5}>
+            <Select
+              allowClear
+              placeholder="状态"
+              style={{ width: '100%' }}
+              value={filters.status}
+              onChange={(value) => setFilters((prev) => ({ ...prev, status: value || undefined }))}
+              options={[
+                { value: 'published', label: '已发布' },
+                { value: 'draft', label: '草稿' },
+                { value: 'hidden', label: '已隐藏' },
+              ]}
+            />
+          </Col>
+          <Col xs={12} md={7} lg={5}>
+            <Select
+              allowClear
+              placeholder="分类"
+              style={{ width: '100%' }}
+              value={filters.category}
+              onChange={(value) => setFilters((prev) => ({ ...prev, category: value || undefined }))}
+              options={categoryOptions.map((item) => ({ value: item, label: item }))}
+            />
+          </Col>
+          <Col xs={24} lg={6}>
+            <Space wrap>
+              <Button type="primary" onClick={handleQuery}>查询</Button>
+              <Button onClick={handleReset}>重置</Button>
+            </Space>
+          </Col>
+        </Row>
+
+        <Table
+          rowKey="id"
+          loading={loading}
+          columns={columns}
+          dataSource={dataSource}
+          pagination={pagination}
+          onChange={(pager) => fetchList(pager.current, pager.pageSize, filters)}
+        />
+      </Card>
+    </div>
   );
 };
 

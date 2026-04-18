@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Image, Input, Segmented, Space, Table, Tag, message } from 'antd';
 import adminApi from '../../utils/adminApi';
+import AdminPageHeader from '../../components/admin/AdminPageHeader';
 
 const { Search } = Input;
 
@@ -145,7 +146,13 @@ const AdminFavorites = () => {
   ];
 
   return (
-    <Card title="收藏管理（题目 / 作品）">
+    <div>
+      <AdminPageHeader
+        title="收藏管理"
+        description="题目收藏与作品收藏统一查看"
+      />
+
+      <Card>
       <Space style={{ marginBottom: 16 }} wrap>
         <Segmented
           value={mode}
@@ -177,7 +184,8 @@ const AdminFavorites = () => {
         pagination={pagination}
         onChange={(pager) => fetchList(pager.current, pager.pageSize, mode, keyword)}
       />
-    </Card>
+      </Card>
+    </div>
   );
 };
 

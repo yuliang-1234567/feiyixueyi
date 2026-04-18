@@ -1,5 +1,6 @@
 import React from 'react';
 import { Card, List, Typography } from 'antd';
+import AdminPageHeader from '../../components/admin/AdminPageHeader';
 
 const { Paragraph } = Typography;
 
@@ -12,7 +13,13 @@ const todoList = [
 
 const AdminContent = () => {
   return (
-    <Card title="内容管理（占位框架）">
+    <div>
+      <AdminPageHeader
+        title="内容管理"
+        description="新闻、推荐位、举报等运营能力（占位框架）"
+      />
+
+      <Card>
       <Paragraph>
         这是后台管理系统第一版骨架页面，已完成路由与权限保护，便于后续逐步补齐业务能力。
       </Paragraph>
@@ -21,7 +28,8 @@ const AdminContent = () => {
         dataSource={todoList}
         renderItem={(item) => <List.Item>{item}</List.Item>}
       />
-    </Card>
+      </Card>
+    </div>
   );
 };
 

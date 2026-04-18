@@ -18,6 +18,8 @@ function HeritageSketch() {
   const [form] = Form.useForm();
   const [artworkForm] = Form.useForm();
 
+  const migrationState = useMemo(() => location.state || {}, [location.state]);
+
   const [hasDrawing, setHasDrawing] = useState(false);
   const [styleKey, setStyleKey] = useState('paper-cutting');
   const [customStylePrompt, setCustomStylePrompt] = useState('');
@@ -33,6 +35,8 @@ function HeritageSketch() {
   const [previewImage, setPreviewImage] = useState('');
   const [canvasBackgroundUrl, setCanvasBackgroundUrl] = useState('');
   const [baseDescription, setBaseDescription] = useState('');
+  /** 仅迁移自数字焕新后展示「追加修改」 */
+  const [showAdditionalEdit, setShowAdditionalEdit] = useState(false);
   const [saving, setSaving] = useState(false);
   const [artworkModalVisible, setArtworkModalVisible] = useState(false);
 
@@ -40,7 +44,6 @@ function HeritageSketch() {
   const description = Form.useWatch('description', form) || '';
   const additionalDescription = Form.useWatch('additionalDescription', form) || '';
   const canGenerate = hasDrawing && String(description || '').trim() && !loading;
-  const migrationState = location.state || {};
 
   const selectedStyleLabel = useMemo(() => {
     return styleOptions.find((s) => s.value === styleKey)?.label || '自定义';
@@ -72,8 +75,36 @@ function HeritageSketch() {
     }
     if (migrationState.sourceImageUrl) {
       setCanvasBackgroundUrl(getImageUrl(migrationState.sourceImageUrl));
+      setShowAdditionalEdit(true);
     }
   }, [form, migrationState]);
+
+  const handleResetAll = () => {
+    if (loading || saving) return;
+
+    // 清空表单与页面状态
+    form.resetFields();
+    setStyleKey('paper-cutting');
+    setCustomStylePrompt('');
+    setHasDrawing(false);
+    setResult(null);
+    setPreviewImage('');
+    setCanvasBackgroundUrl('');
+    setBaseDescription('');
+    setShowAdditionalEdit(false);
+
+    // 清空画布笔触
+    sketchRef.current?.clear?.();
+
+    // 关闭发布弹窗并清空发布表单
+    setArtworkModalVisible(false);
+    artworkForm.resetFields();
+
+    // 清空迁移 state，避免重置后又被回填
+    navigate('/heritage-sketch', { replace: true, state: {} });
+
+    message.success('已重置：描述/风格/草图/底图/结果已清空');
+  };
 
   const inferProductCategory = (text) => {
     const source = String(text || '');
@@ -83,28 +114,6 @@ function HeritageSketch() {
     if (source.includes('明信片')) return '明信片';
     if (source.includes('马克杯') || source.includes('杯')) return '其他';
     return '其他';
-  };
-
-  const getAiModelDisplay = (data) => {
-    const ai = data?.ai;
-    if (!ai) {
-      return '未调用AI模型（本地兜底）';
-    }
-
-    const models = [];
-    const stage1 = ai.pipeline?.stage1;
-    const stage2 = ai.pipeline?.stage2;
-    const stage2Applied = Boolean(ai.pipeline?.stage2Applied);
-
-    if (stage1) models.push(stage1);
-    if (stage2Applied && stage2) models.push(stage2);
-    if (models.length === 0 && ai.model) models.push(ai.model);
-
-    const uniqueModels = [...new Set(models.filter(Boolean))];
-    if (uniqueModels.length === 0) {
-      return '未识别到模型';
-    }
-    return uniqueModels.join(' -> ');
   };
 
   const handleGenerate = async () => {
@@ -126,19 +135,22 @@ function HeritageSketch() {
 
     setLoading(true);
     try {
-      const productImageUrl = migrationState.sourceImageUrl
-        ? getImageUrl(migrationState.sourceImageUrl)
-        : String(canvasBackgroundUrl || '').trim();
+      // 仅迁移后画布有产品底图时，才传 productImageUrl，走后端双图合成；首次空白画布只传笔触层
+      const hasProductBase = Boolean(String(canvasBackgroundUrl || '').trim());
       const payload = {
         sketchBase64,
         sketchLayerBase64,
-        productImageUrl,
         styleKey,
         description: String(description || '').trim(),
         baseDescription: String(baseDescription || '').trim(),
         currentDescription: String(description || '').trim(),
         additionalDescription: String(additionalDescription || '').trim(),
-        referenceImageUrl: migrationState.sourceImageUrl || '',
+        ...(hasProductBase
+          ? {
+              productImageUrl: String(canvasBackgroundUrl).trim(),
+              referenceImageUrl: migrationState.sourceImageUrl || '',
+            }
+          : {}),
         ...(isCustomStyle ? { customStylePrompt: String(customStylePrompt || '').trim() } : {}),
       };
 
@@ -242,8 +254,8 @@ function HeritageSketch() {
           </p>
         </div>
 
-        <div className="heritage-card heritage-toolbarCard">
-          <Form form={form} layout="vertical" requiredMark={false}>
+        <div className="heritage-card heritage-toolbarCard heritage-toolbarCard--compact">
+          <Form form={form} layout="vertical" size="small" requiredMark={false} className="heritage-toolbarForm">
             <div className="heritage-toolbarTop">
               <Form.Item
                 name="description"
@@ -253,7 +265,8 @@ function HeritageSketch() {
               >
                 <TextArea
                   rows={2}
-                  placeholder="例如：一个红色剪纸花纹的T恤、一个青花瓷花纹的木椅、一个丝线刺绣纹样的抱枕..."
+                  autoSize={{ minRows: 2, maxRows: 4 }}
+                  placeholder="例如：青花瓷纹样木椅、红色剪纸T恤..."
                 />
               </Form.Item>
               <div className="heritage-toolbarActions">
@@ -267,6 +280,14 @@ function HeritageSketch() {
                 >
                   生成效果
                 </Button>
+                <Button
+                  danger
+                  disabled={loading || saving}
+                  onClick={handleResetAll}
+                  className="heritage-resetBtn"
+                >
+                  重置
+                </Button>
                 {result ? (
                   <>
                     <Button
@@ -277,37 +298,26 @@ function HeritageSketch() {
                     >
                       保存/发布
                     </Button>
-                    <Button
-                      onClick={() => {
-                        if (!result?.transformedImageUrl) return;
-                        const nextBg = getImageUrl(result.transformedImageUrl);
-                        setCanvasBackgroundUrl(nextBg);
-                        setPreviewImage('');
-                        setResult(null);
-                        form.setFieldsValue({ additionalDescription: '' });
-                        message.success('已进入继续创作：生成图已作为新底图');
-                      }}
-                      className="heritage-continueBtn"
-                    >
-                      继续创作
-                    </Button>
                   </>
                 ) : null}
               </div>
             </div>
-            <Form.Item
-              name="additionalDescription"
-              label="追加修改（可选）"
-              className="heritage-toolbarMainItem"
-            >
-              <TextArea
-                rows={2}
-                placeholder="例如：将笔墨当做树枝等符合场景的元素继续添加到T恤上；增强雪花纹样的天蓝色层次..."
-              />
-            </Form.Item>
+            {showAdditionalEdit ? (
+              <Form.Item
+                name="additionalDescription"
+                label="追加修改（可选）"
+                className="heritage-toolbarMainItem heritage-additionalItem"
+              >
+                <TextArea
+                  rows={2}
+                  autoSize={{ minRows: 2, maxRows: 4 }}
+                  placeholder="在迁移后补充修改意图…"
+                />
+              </Form.Item>
+            ) : null}
             <div className="heritage-toolbarBottom">
               <div className="heritage-styleBlock">
-                <div className="heritage-inlineLabel">非遗风格</div>
+                <span className="heritage-inlineLabel">非遗风格</span>
                 <Select
                   value={styleKey}
                   onChange={(next) => {
@@ -316,24 +326,26 @@ function HeritageSketch() {
                   }}
                   options={styleOptions}
                   className="heritage-styleSelect"
+                  size="middle"
                 />
               </div>
               {styleKey === 'custom' ? (
                 <div className="heritage-styleBlock heritage-styleBlockFlex">
-                  <div className="heritage-inlineLabel">自定义风格</div>
+                  <span className="heritage-inlineLabel">自定义</span>
                   <Input
                     value={customStylePrompt}
                     onChange={(e) => {
                       setCustomStylePrompt(e.target.value);
                       setResult(null);
                     }}
-                    placeholder="例如：保留剪纸对称结构、增强手工质感、偏暖红金配色..."
+                    placeholder="风格补充…"
+                    size="middle"
                   />
                 </div>
               ) : null}
               <div className="heritage-currentTag">
-                <Tag color="purple">当前风格：{selectedStyleLabel}</Tag>
-                {migrationState.sourceProductType ? <Tag>迁移来源：{migrationState.sourceProductType}</Tag> : null}
+                <Tag color="purple">{selectedStyleLabel}</Tag>
+                {migrationState.sourceProductType ? <Tag>迁移：{migrationState.sourceProductType}</Tag> : null}
               </div>
             </div>
           </Form>
@@ -341,37 +353,31 @@ function HeritageSketch() {
 
         <div className="heritage-twoPane">
           <div className="heritage-leftPane">
-            <div className="heritage-card">
+            <div className="heritage-card heritage-paneCard">
               <div className="heritage-cardTitle">草图画布</div>
-              <SketchCanvas
-                ref={sketchRef}
-                backgroundImageUrl={canvasBackgroundUrl}
-                onHasDrawingChange={(v) => {
-                  setHasDrawing(Boolean(v));
-                }}
-              />
+              <div className="heritage-visualSlot">
+                <SketchCanvas
+                  ref={sketchRef}
+                  backgroundImageUrl={canvasBackgroundUrl}
+                  onHasDrawingChange={(v) => {
+                    setHasDrawing(Boolean(v));
+                  }}
+                />
+              </div>
             </div>
           </div>
 
           <div className="heritage-rightPane">
-            <div className="heritage-card heritage-previewCard">
+            <div className="heritage-card heritage-previewCard heritage-paneCard">
               <div className="heritage-previewHead">
                 <div className="heritage-cardTitle">图片预览</div>
-                {result?.transformSource ? (
+                {result?.transformSource === 'ai' ? (
                   <div className="heritage-previewTags">
-                    <Tag color="purple">{result.transformSource}</Tag>
-                    {result.ai?.model ? <Tag>{result.ai.model}</Tag> : null}
+                    <Tag color="green">已生成</Tag>
                   </div>
                 ) : null}
               </div>
               <div className="heritage-previewBody">
-                {result ? (
-                  <div className="heritage-modelBar">
-                    <span className="heritage-modelLabel">调用AI模型</span>
-                    <span className="heritage-modelValue">{getAiModelDisplay(result)}</span>
-                  </div>
-                ) : null}
-
                 {previewImage ? (
                   <div className="heritage-previewImageWrap">
                     <img src={previewImage} alt="效果预览" className="heritage-previewImage" />

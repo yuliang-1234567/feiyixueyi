@@ -2,12 +2,14 @@ import React, { useEffect, useState } from 'react';
 import {
   Button,
   Card,
+  Col,
   Collapse,
   Form,
   Input,
   InputNumber,
   Modal,
   Popconfirm,
+  Row,
   Segmented,
   Select,
   Space,
@@ -16,6 +18,7 @@ import {
   message,
 } from 'antd';
 import adminApi from '../../utils/adminApi';
+import AdminPageHeader from '../../components/admin/AdminPageHeader';
 
 const categoryOptions = ['T恤', '手机壳', '帆布袋', '明信片', '其他'];
 
@@ -329,8 +332,14 @@ const AdminProducts = () => {
     ];
 
   return (
-    <Card title="商品管理（P0）">
-      <Space direction="vertical" size={12} style={{ width: '100%' }}>
+    <div>
+      <AdminPageHeader
+        title="商品管理"
+        description="审核、上下架、批量调价与违规处理"
+      />
+
+      <Card>
+        <Space direction="vertical" size={12} style={{ width: '100%' }}>
         <Segmented
           value={viewMode}
           onChange={(value) => setViewMode(value)}
@@ -340,69 +349,82 @@ const AdminProducts = () => {
           ]}
         />
 
-        <Space wrap>
-          <Input
-            style={{ width: 220 }}
-            placeholder="搜索商品名/描述"
-            value={filters.keyword}
-            onChange={(e) => setFilters((prev) => ({ ...prev, keyword: e.target.value }))}
-            onPressEnter={() => resetAndFetch()}
-          />
-          <Select
-            allowClear
-            style={{ width: 140 }}
-            placeholder="状态"
-            value={filters.status}
-            onChange={(value) => setFilters((prev) => ({ ...prev, status: value }))}
-            options={[
-              { value: 'published', label: 'published' },
-              { value: 'draft', label: 'draft' },
-              { value: 'sold_out', label: 'sold_out' },
-            ]}
-          />
-          <Select
-            allowClear
-            style={{ width: 140 }}
-            placeholder="分类"
-            value={filters.category}
-            onChange={(value) => setFilters((prev) => ({ ...prev, category: value }))}
-            options={categoryOptions.map((c) => ({ value: c, label: c }))}
-          />
-          <Select
-            allowClear
-            style={{ width: 160 }}
-            placeholder="违规状态"
-            value={filters.violationStatus}
-            onChange={(value) => setFilters((prev) => ({ ...prev, violationStatus: value }))}
-            options={[
-              { value: 'normal', label: 'normal' },
-              { value: 'suspected', label: 'suspected' },
-              { value: 'confirmed', label: 'confirmed' },
-            ]}
-          />
-          <Select
-            allowClear
-            style={{ width: 160 }}
-            placeholder="复审状态"
-            value={filters.reviewStatus}
-            onChange={(value) => setFilters((prev) => ({ ...prev, reviewStatus: value }))}
-            options={[
-              { value: 'pending', label: 'pending' },
-              { value: 'approved', label: 'approved' },
-              { value: 'rejected', label: 'rejected' },
-              { value: 'reopened', label: 'reopened' },
-            ]}
-          />
-          <Button type="primary" onClick={() => resetAndFetch()}>
-            查询
-          </Button>
-          <Button onClick={() => {
-            setFilters({ keyword: '', status: undefined, category: undefined, violationStatus: undefined, reviewStatus: undefined });
-            setTimeout(() => fetchList(1, pagination.pageSize), 0);
-          }}>
-            重置
-          </Button>
-        </Space>
+        <Row gutter={[12, 12]} align="middle">
+          <Col xs={24} md={10} lg={7}>
+            <Input
+              placeholder="搜索商品名/描述"
+              value={filters.keyword}
+              onChange={(e) => setFilters((prev) => ({ ...prev, keyword: e.target.value }))}
+              onPressEnter={() => resetAndFetch()}
+            />
+          </Col>
+          <Col xs={12} md={7} lg={4}>
+            <Select
+              allowClear
+              style={{ width: '100%' }}
+              placeholder="状态"
+              value={filters.status}
+              onChange={(value) => setFilters((prev) => ({ ...prev, status: value }))}
+              options={[
+                { value: 'published', label: 'published' },
+                { value: 'draft', label: 'draft' },
+                { value: 'sold_out', label: 'sold_out' },
+              ]}
+            />
+          </Col>
+          <Col xs={12} md={7} lg={4}>
+            <Select
+              allowClear
+              style={{ width: '100%' }}
+              placeholder="分类"
+              value={filters.category}
+              onChange={(value) => setFilters((prev) => ({ ...prev, category: value }))}
+              options={categoryOptions.map((c) => ({ value: c, label: c }))}
+            />
+          </Col>
+          <Col xs={12} md={7} lg={4}>
+            <Select
+              allowClear
+              style={{ width: '100%' }}
+              placeholder="违规状态"
+              value={filters.violationStatus}
+              onChange={(value) => setFilters((prev) => ({ ...prev, violationStatus: value }))}
+              options={[
+                { value: 'normal', label: 'normal' },
+                { value: 'suspected', label: 'suspected' },
+                { value: 'confirmed', label: 'confirmed' },
+              ]}
+            />
+          </Col>
+          <Col xs={12} md={7} lg={4}>
+            <Select
+              allowClear
+              style={{ width: '100%' }}
+              placeholder="复审状态"
+              value={filters.reviewStatus}
+              onChange={(value) => setFilters((prev) => ({ ...prev, reviewStatus: value }))}
+              options={[
+                { value: 'pending', label: 'pending' },
+                { value: 'approved', label: 'approved' },
+                { value: 'rejected', label: 'rejected' },
+                { value: 'reopened', label: 'reopened' },
+              ]}
+            />
+          </Col>
+          <Col xs={24} lg={5}>
+            <Space wrap>
+              <Button type="primary" onClick={() => resetAndFetch()}>
+                查询
+              </Button>
+              <Button onClick={() => {
+                setFilters({ keyword: '', status: undefined, category: undefined, violationStatus: undefined, reviewStatus: undefined });
+                setTimeout(() => fetchList(1, pagination.pageSize), 0);
+              }}>
+                重置
+              </Button>
+            </Space>
+          </Col>
+        </Row>
 
         <Space wrap>
           <Button onClick={() => doBatchAction('setStatus', { status: 'published' })}>批量上架</Button>
@@ -455,7 +477,8 @@ const AdminProducts = () => {
             }}
           />
         )}
-      </Space>
+        </Space>
+      </Card>
 
       <Modal
         title="编辑商品"
@@ -569,7 +592,7 @@ const AdminProducts = () => {
           />
         </Space>
       </Modal>
-    </Card>
+    </div>
   );
 };
 

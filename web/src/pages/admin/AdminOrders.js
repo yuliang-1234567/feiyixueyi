@@ -2,11 +2,13 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   Button,
   Card,
+  Col,
   DatePicker,
   Form,
   Input,
   InputNumber,
   Modal,
+  Row,
   Select,
   Space,
   Table,
@@ -15,6 +17,7 @@ import {
 } from 'antd';
 import dayjs from 'dayjs';
 import adminApi from '../../utils/adminApi';
+import AdminPageHeader from '../../components/admin/AdminPageHeader';
 
 const { RangePicker } = DatePicker;
 
@@ -238,38 +241,56 @@ const AdminOrders = () => {
   ], []);
 
   return (
-    <Card title="订单管理（P0）">
-      <Space direction="vertical" size={12} style={{ width: '100%' }}>
-        <Space wrap>
-          <InputNumber
-            min={1}
-            style={{ width: 160 }}
-            placeholder="订单ID"
-            value={filters.orderId}
-            onChange={(value) => setFilters((prev) => ({ ...prev, orderId: value || undefined }))}
-          />
-          <Select
-            allowClear
-            style={{ width: 140 }}
-            placeholder="订单状态"
-            value={filters.status}
-            onChange={(value) => setFilters((prev) => ({ ...prev, status: value }))}
-            options={statusOptions}
-          />
-          <InputNumber
-            min={1}
-            style={{ width: 140 }}
-            placeholder="用户ID"
-            value={filters.userId}
-            onChange={(value) => setFilters((prev) => ({ ...prev, userId: value || undefined }))}
-          />
-          <RangePicker
-            value={filters.dateRange}
-            onChange={(dates) => setFilters((prev) => ({ ...prev, dateRange: dates }))}
-          />
-          <Button type="primary" onClick={onSearch}>查询</Button>
-          <Button onClick={onReset}>重置</Button>
-        </Space>
+    <div>
+      <AdminPageHeader
+        title="订单管理"
+        description="订单状态流转与售后备注集中处理"
+      />
+
+      <Card>
+        <Row gutter={[12, 12]} align="middle" style={{ marginBottom: 12 }}>
+          <Col xs={12} md={6} lg={4}>
+            <InputNumber
+              min={1}
+              style={{ width: '100%' }}
+              placeholder="订单ID"
+              value={filters.orderId}
+              onChange={(value) => setFilters((prev) => ({ ...prev, orderId: value || undefined }))}
+            />
+          </Col>
+          <Col xs={12} md={6} lg={4}>
+            <Select
+              allowClear
+              style={{ width: '100%' }}
+              placeholder="订单状态"
+              value={filters.status}
+              onChange={(value) => setFilters((prev) => ({ ...prev, status: value }))}
+              options={statusOptions}
+            />
+          </Col>
+          <Col xs={12} md={6} lg={4}>
+            <InputNumber
+              min={1}
+              style={{ width: '100%' }}
+              placeholder="用户ID"
+              value={filters.userId}
+              onChange={(value) => setFilters((prev) => ({ ...prev, userId: value || undefined }))}
+            />
+          </Col>
+          <Col xs={24} md={6} lg={8}>
+            <RangePicker
+              style={{ width: '100%' }}
+              value={filters.dateRange}
+              onChange={(dates) => setFilters((prev) => ({ ...prev, dateRange: dates }))}
+            />
+          </Col>
+          <Col xs={24} lg={4}>
+            <Space wrap>
+              <Button type="primary" onClick={onSearch}>查询</Button>
+              <Button onClick={onReset}>重置</Button>
+            </Space>
+          </Col>
+        </Row>
 
         <Table
           rowKey="id"
@@ -280,7 +301,7 @@ const AdminOrders = () => {
           scroll={{ x: 1300 }}
           onChange={(pager) => fetchList(pager.current, pager.pageSize)}
         />
-      </Space>
+      </Card>
 
       <Modal
         title={currentOrder ? `订单 #${currentOrder.id} 备注` : '订单备注'}
@@ -305,7 +326,7 @@ const AdminOrders = () => {
           </Form.Item>
         </Form>
       </Modal>
-    </Card>
+    </div>
   );
 };
 

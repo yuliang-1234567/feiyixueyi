@@ -1,0 +1,96 @@
+.adminLayout {
+  min-height: 100vh;
+}
+
+.adminSider {
+  position: relative;
+}
+
+.adminBrand {
+  padding: 18px 16px 10px;
+  color: #fff;
+}
+
+.adminBrandTitle {
+  margin: 0 !important;
+  color: #fff !important;
+  letter-spacing: 0.02em;
+}
+
+.adminBrandSubtitle {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 12px;
+}
+
+.adminSiderFooter {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 20px;
+}
+
+.adminMain {
+  background: transparent;
+}
+
+.adminContentWrap {
+  padding: 20px;
+}
+
+.adminPageSurface {
+  background: var(--bg-paper);
+  border: 1px solid var(--border-color);
+  border-radius: var(--apple-radius-lg, 12px);
+  box-shadow: var(--shadow-sm);
+  padding: 16px;
+  min-height: calc(100vh - 40px);
+}
+
+.adminPageSurface :where(a, button, [role='button'], input, textarea, .ant-select-selector):focus-visible {
+  outline: 2px solid rgba(200, 16, 46, 0.35);
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+
+/* 后台卡片 hover 适度收敛，避免过强“跳动感” */
+.adminPageSurface :where(.ant-card:hover) {
+  transform: translateY(-2px);
+}
+
+.adminMobileHeader {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--bg-paper) 86%, transparent);
+  backdrop-filter: var(--apple-blur-light, blur(10px) saturate(150%));
+  -webkit-backdrop-filter: var(--apple-blur-light, blur(10px) saturate(150%));
+  border-bottom: 1px solid rgba(139, 111, 71, 0.18);
+}
+
+.adminMobileTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+}
+
+.adminMobileHint {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+@media (max-width: 768px) {
+  .adminContentWrap {
+    padding: 12px;
+  }
+
+  .adminPageSurface {
+    padding: 12px;
+    min-height: calc(100vh - 24px);
+  }
+}
+

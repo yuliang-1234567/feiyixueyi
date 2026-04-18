@@ -1,5 +1,5 @@
-import React from 'react';
-import { Layout, Menu, Typography, Button } from 'antd';
+import React, { useMemo, useState } from 'react';
+import { Button, Drawer, Grid, Layout, Menu, Typography } from 'antd';
 import {
 	DashboardOutlined,
 	TeamOutlined,
@@ -9,10 +9,14 @@ import {
 	OrderedListOutlined,
 	RobotOutlined,
 	LogoutOutlined,
+	MenuOutlined,
 } from '@ant-design/icons';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
+import AdminThemeProvider from './AdminThemeProvider';
+import './AdminLayout.css';
 
+const { useBreakpoint } = Grid;
 const { Sider, Content } = Layout;
 const { Title, Text } = Typography;
 
@@ -69,51 +73,93 @@ const AdminLayout = () => {
 	const location = useLocation();
 	const navigate = useNavigate();
 	const { logout } = useAuthStore();
+	const screens = useBreakpoint();
+	const [mobileOpen, setMobileOpen] = useState(false);
 
 	const handleLogout = () => {
 		logout();
 		navigate('/login');
 	};
 
-	return (
-		<Layout style={{ minHeight: '100vh', background: '#f5f7fb' }}>
-			<Sider breakpoint="lg" collapsedWidth="0" width={240} style={{ position: 'relative' }}>
-				<div style={{ padding: '20px 16px', color: '#fff' }}>
-					<Title level={4} style={{ color: '#fff', margin: 0 }}>
-						非遗学艺后台
-					</Title>
-					<Text style={{ color: 'rgba(255,255,255,0.7)' }}>Admin Panel</Text>
-				</div>
-				<Menu
-					theme="dark"
-					mode="inline"
-					selectedKeys={[normalizeSelectedKey(location.pathname)]}
-					items={menuItems}
-				/>
-				<div
-					style={{
-						position: 'absolute',
-						left: 12,
-						right: 12,
-						bottom: 32,
-					}}
-				>
-					<Button
-						block
-						icon={<LogoutOutlined />}
-						onClick={handleLogout}
-					>
-						退出登录
-					</Button>
-				</div>
-			</Sider>
+	const selectedKey = useMemo(
+		() => normalizeSelectedKey(location.pathname),
+		[location.pathname]
+	);
 
-			<Layout>
-				<Content style={{ margin: 20 }}>
-					<Outlet />
-				</Content>
+	const adminMenu = (
+		<Menu
+			theme="dark"
+			mode="inline"
+			selectedKeys={[selectedKey]}
+			items={menuItems}
+			onClick={() => setMobileOpen(false)}
+		/>
+	);
+
+	const isDesktop = !!screens.lg;
+
+	return (
+		<AdminThemeProvider>
+			<Layout className="adminLayout">
+				{isDesktop ? (
+					<Sider className="adminSider" width={240}>
+						<div className="adminBrand">
+							<Title level={4} className="adminBrandTitle">
+								非遗学艺后台
+							</Title>
+							<Text className="adminBrandSubtitle">Admin Panel</Text>
+						</div>
+						{adminMenu}
+						<div className="adminSiderFooter">
+							<Button block icon={<LogoutOutlined />} onClick={handleLogout}>
+								退出登录
+							</Button>
+						</div>
+					</Sider>
+				) : null}
+
+				<Layout className="adminMain">
+					{!isDesktop ? (
+						<div className="adminMobileHeader">
+							<Button
+								aria-label="打开菜单"
+								icon={<MenuOutlined />}
+								onClick={() => setMobileOpen(true)}
+							/>
+							<div style={{ textAlign: 'center', flex: 1 }}>
+								<div className="adminMobileTitle">非遗学艺后台</div>
+								<div className="adminMobileHint">{selectedKey.replace('/admin/', '')}</div>
+							</div>
+							<Button aria-label="退出登录" icon={<LogoutOutlined />} onClick={handleLogout} />
+						</div>
+					) : null}
+
+					<Content className="adminContentWrap">
+						<div className="adminPageSurface">
+							<Outlet />
+						</div>
+					</Content>
+				</Layout>
 			</Layout>
-		</Layout>
+
+			{!isDesktop ? (
+				<Drawer
+					title="后台菜单"
+					placement="left"
+					open={mobileOpen}
+					onClose={() => setMobileOpen(false)}
+					width={280}
+					bodyStyle={{ padding: 0 }}
+				>
+					{adminMenu}
+					<div style={{ padding: 12 }}>
+						<Button block icon={<LogoutOutlined />} onClick={handleLogout}>
+							退出登录
+						</Button>
+					</div>
+				</Drawer>
+			) : null}
+		</AdminThemeProvider>
 	);
 };
 

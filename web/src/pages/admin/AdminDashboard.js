@@ -3,7 +3,6 @@ import {
   Alert,
   Card,
   Col,
-  Progress,
   Row,
   Spin,
   Statistic,
@@ -18,6 +17,7 @@ import {
   PercentageOutlined,
 } from '@ant-design/icons';
 import adminApi from '../../utils/adminApi';
+import EChart, { buildBarOption, buildFunnelOption, buildLineOption } from '../../components/charts/EChart';
 
 const { Paragraph, Text } = Typography;
 
@@ -47,15 +47,9 @@ const AdminDashboard = () => {
   const hotArtworks = dashboard?.hot?.artworks || [];
   const hotProducts = dashboard?.hot?.products || [];
   const topActiveHours = dashboard?.activeHours?.top || [];
+  const trendDays = dashboard?.trend?.days || [];
   const funnel = dashboard?.funnel?.steps || {};
   const funnelConv = dashboard?.funnel?.conversion || {};
-
-  const maxActivity = Math.max(
-    1,
-    ...topActiveHours.map((item) => Number(item?.activity || 0))
-  );
-
-  const funnelBase = Math.max(1, Number(funnel?.browse || 0));
 
   const artworkColumns = [
     {
@@ -113,6 +107,26 @@ const AdminDashboard = () => {
     { key: 'pay', name: '支付', value: Number(funnel?.pay || 0) },
   ];
 
+  const activeHourLabels = (topActiveHours || []).map((item) => String(item?.hour || '-'));
+  const activeHourSeries = [
+    {
+      name: '活跃度',
+      data: (topActiveHours || []).map((item) => Number(item?.activity || 0)),
+    },
+  ];
+
+  const funnelChartData = funnelRows.map((row) => ({ name: row.name, value: row.value }));
+
+  const trendLabels = (trendDays || []).map((d) => String(d?.date || '-').slice(5));
+  const trendOptionFactory = buildLineOption({
+    title: undefined,
+    xAxis: trendLabels,
+    series: [
+      { name: '新增用户', data: (trendDays || []).map((d) => Number(d?.newUsers || 0)) },
+      { name: '新增订单', data: (trendDays || []).map((d) => Number(d?.newOrders || 0)) },
+    ],
+  });
+
   if (loading) {
     return (
       <Card>
@@ -168,6 +182,15 @@ const AdminDashboard = () => {
       </Row>
 
       <Row gutter={[16, 16]} style={{ marginTop: 8 }}>
+        <Col xs={24} lg={24}>
+          <Card title="趋势（近7天）">
+            {trendDays.length ? (
+              <EChart height={280} ariaLabel="近7天趋势折线图" optionFactory={trendOptionFactory} />
+            ) : (
+              <Text type="secondary">暂无趋势数据</Text>
+            )}
+          </Card>
+        </Col>
         <Col xs={24} lg={12}>
           <Card title="热门作品">
             <Table
@@ -195,36 +218,36 @@ const AdminDashboard = () => {
       <Row gutter={[16, 16]} style={{ marginTop: 8 }}>
         <Col xs={24} lg={12}>
           <Card title="活跃时段（近7天）">
-            {(topActiveHours || []).map((item) => {
-              const activity = Number(item?.activity || 0);
-              const percent = Math.min(100, Number(((activity / maxActivity) * 100).toFixed(2)));
-              return (
-                <div key={item.hour} style={{ marginBottom: 12 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <Text strong>{item.hour}</Text>
-                    <Text type="secondary">浏览 {item.views} / 下单 {item.orders}</Text>
-                  </div>
-                  <Progress percent={percent} showInfo={false} strokeColor="#1677ff" />
-                </div>
-              );
-            })}
-            {!topActiveHours.length ? <Text type="secondary">暂无活跃时段数据</Text> : null}
+            {topActiveHours.length ? (
+              <EChart
+                height={280}
+                ariaLabel="活跃时段柱状图"
+                optionFactory={buildBarOption({
+                  title: undefined,
+                  xAxis: activeHourLabels,
+                  series: activeHourSeries,
+                })}
+              />
+            ) : (
+              <Text type="secondary">暂无活跃时段数据</Text>
+            )}
+            {topActiveHours.length ? (
+              <div style={{ marginTop: 8 }}>
+                <Text type="secondary">提示：柱越高表示该时段综合活跃度越高。</Text>
+              </div>
+            ) : null}
           </Card>
         </Col>
         <Col xs={24} lg={12}>
           <Card title="漏斗分析（浏览→加购→下单→支付）">
-            {funnelRows.map((row) => {
-              const percent = Number(((row.value / funnelBase) * 100).toFixed(2));
-              return (
-                <div key={row.key} style={{ marginBottom: 12 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <Text strong>{row.name}</Text>
-                    <Text>{row.value}</Text>
-                  </div>
-                  <Progress percent={Math.min(100, percent)} showInfo={false} />
-                </div>
-              );
-            })}
+            <EChart
+              height={280}
+              ariaLabel="漏斗图"
+              optionFactory={buildFunnelOption({
+                title: undefined,
+                data: funnelChartData,
+              })}
+            />
             <div style={{ marginTop: 8 }}>
               <Tag color="blue">浏览到加购 {Number(funnelConv?.browseToCart || 0)}%</Tag>
               <Tag color="purple">加购到下单 {Number(funnelConv?.cartToOrder || 0)}%</Tag>

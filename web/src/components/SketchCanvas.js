@@ -1,10 +1,14 @@
-import React, { forwardRef, useImperativeHandle, useMemo, useRef, useState, useEffect } from 'react';
-import { Button, message } from 'antd';
-import { CornerUpLeft, CornerUpRight, Trash2 } from 'lucide-react';
+import React, { forwardRef, useImperativeHandle, useRef, useState, useEffect } from 'react';
+import { Button, Slider, message } from 'antd';
+import { Brush, CornerUpLeft, CornerUpRight, Eraser, Trash2 } from 'lucide-react';
 import './SketchCanvas.css';
 
 const CANVAS_SIZE = 512;
 const HISTORY_LIMIT = 40;
+const DEFAULT_BRUSH_SIZE = 6;
+const DEFAULT_BRUSH_COLOR = '#111827';
+const BRUSH_SIZE_RANGE = { min: 2, max: 24 };
+const PRESET_COLORS = ['#111827', '#ef4444', '#2563eb', '#16a34a', '#8b5e34'];
 
 const SketchCanvas = forwardRef(function SketchCanvas(
   { onHasDrawingChange, backgroundImageUrl },
@@ -19,17 +23,18 @@ const SketchCanvas = forwardRef(function SketchCanvas(
   const exportCanvasRef = useRef(null); // 离屏合成导出（底图+笔触）
 
   const isDrawingRef = useRef(false);
+  const didDrawRef = useRef(false);
   const lastPointRef = useRef({ x: 0, y: 0 });
   const historyRef = useRef([]);
   const historyIndexRef = useRef(-1);
-  const restoreSeqRef = useRef(0);
-  const restoreBusyRef = useRef(false);
-  const restoreQueuedRef = useRef(null);
+  /** 串行化所有还原操作，避免并发 decode/绘制导致偶发未还原 */
+  const restoreChainRef = useRef(Promise.resolve());
 
   const [hasDrawing, setHasDrawing] = useState(false);
   const [historyTick, setHistoryTick] = useState(0);
-
-  const strokeStyle = useMemo(() => '#111827', []);
+  const [tool, setTool] = useState('brush'); // 'brush' | 'eraser'
+  const [brushSize, setBrushSize] = useState(DEFAULT_BRUSH_SIZE);
+  const [brushColor, setBrushColor] = useState(DEFAULT_BRUSH_COLOR);
 
   const setDrawingState = (next) => {
     setHasDrawing(next);
@@ -92,8 +97,6 @@ const SketchCanvas = forwardRef(function SketchCanvas(
     ctx.drawImage(img, dx, dy, dw, dh);
   };
 
-  const redrawCompositeFromStrokes = async () => true;
-
   const restoreStrokesFromDataUrl = async (dataUrl) => {
     const strokesCanvas = strokesCanvasRef.current;
     const strokesCtx = strokesCtxRef.current;
@@ -101,18 +104,26 @@ const SketchCanvas = forwardRef(function SketchCanvas(
     const url = String(dataUrl || '').trim();
     if (!url) return false;
 
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    const loaded = await new Promise((resolve) => {
-      img.onload = () => resolve(true);
-      img.onerror = () => resolve(false);
-      img.src = url;
-    });
-    if (!loaded) return false;
-
-    strokesCtx.clearRect(0, 0, strokesCanvas.width, strokesCanvas.height);
-    strokesCtx.drawImage(img, 0, 0, strokesCanvas.width, strokesCanvas.height);
-    return true;
+    try {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      const loaded = await new Promise((resolve) => {
+        img.onload = () => resolve(true);
+        img.onerror = () => resolve(false);
+        img.src = url;
+      });
+      if (!loaded) return false;
+      try {
+        if (typeof img.decode === 'function') await img.decode();
+      } catch {
+        // ignore
+      }
+      strokesCtx.clearRect(0, 0, strokesCanvas.width, strokesCanvas.height);
+      strokesCtx.drawImage(img, 0, 0, strokesCanvas.width, strokesCanvas.height);
+      return true;
+    } catch {
+      return false;
+    }
   };
 
   const pushHistory = () => {
@@ -155,10 +166,11 @@ const SketchCanvas = forwardRef(function SketchCanvas(
     drawWhiteBackground(bgCtx, bgCanvas);
     clearCanvasToTransparent(strokesCtx, strokesCanvas);
 
-    strokesCtx.lineWidth = 6;
+    strokesCtx.lineWidth = DEFAULT_BRUSH_SIZE;
     strokesCtx.lineCap = 'round';
     strokesCtx.lineJoin = 'round';
-    strokesCtx.strokeStyle = strokeStyle;
+    strokesCtx.strokeStyle = DEFAULT_BRUSH_COLOR;
+    strokesCtx.globalCompositeOperation = 'source-over';
 
     // 离屏导出画布
     const exportCanvas = document.createElement('canvas');
@@ -173,28 +185,26 @@ const SketchCanvas = forwardRef(function SketchCanvas(
     const strokesCtx = strokesCtxRef.current;
     if (strokesCanvas && strokesCtx) strokesCtx.clearRect(0, 0, strokesCanvas.width, strokesCanvas.height);
     isDrawingRef.current = false;
+    didDrawRef.current = false;
     lastPointRef.current = { x: 0, y: 0 };
     setDrawingState(false);
     setTimeout(() => resetHistory(), 0);
   };
 
-  const runRestore = async (nextDataUrl) => {
-    const seq = ++restoreSeqRef.current;
-    restoreBusyRef.current = true;
-    const ok = await restoreStrokesFromDataUrl(nextDataUrl);
-    // 若期间又排队了更新，只保留最后一次
-    if (seq !== restoreSeqRef.current) return false;
-    restoreBusyRef.current = false;
-    const queued = restoreQueuedRef.current;
-    restoreQueuedRef.current = null;
-    if (queued) {
-      // 递归消费最后一次
-      return runRestore(queued);
-    }
-    return ok;
+  const scheduleRestore = (nextDataUrl, nextIdx) => {
+    restoreChainRef.current = restoreChainRef.current
+      .then(async () => {
+        const ok = await restoreStrokesFromDataUrl(nextDataUrl);
+        if (ok) {
+          historyIndexRef.current = nextIdx;
+          setDrawingState(nextIdx > 0);
+          bumpHistoryTick();
+        }
+      })
+      .catch(() => {});
   };
 
-  const undo = async () => {
+  const undo = () => {
     const stack = historyRef.current;
     const idx = historyIndexRef.current;
     if (!stack || stack.length <= 1 || idx <= 0) {
@@ -202,22 +212,10 @@ const SketchCanvas = forwardRef(function SketchCanvas(
       return;
     }
     const nextIdx = idx - 1;
-    if (restoreBusyRef.current) {
-      restoreQueuedRef.current = stack[nextIdx];
-      historyIndexRef.current = nextIdx;
-      setDrawingState(nextIdx > 0);
-      bumpHistoryTick();
-      return;
-    }
-    const ok = await runRestore(stack[nextIdx]);
-    if (ok) {
-      historyIndexRef.current = nextIdx;
-      setDrawingState(nextIdx > 0);
-      bumpHistoryTick();
-    }
+    scheduleRestore(stack[nextIdx], nextIdx);
   };
 
-  const redo = async () => {
+  const redo = () => {
     const stack = historyRef.current;
     const idx = historyIndexRef.current;
     if (!stack || stack.length <= 1 || idx >= stack.length - 1) {
@@ -225,19 +223,7 @@ const SketchCanvas = forwardRef(function SketchCanvas(
       return;
     }
     const nextIdx = idx + 1;
-    if (restoreBusyRef.current) {
-      restoreQueuedRef.current = stack[nextIdx];
-      historyIndexRef.current = nextIdx;
-      setDrawingState(nextIdx > 0);
-      bumpHistoryTick();
-      return;
-    }
-    const ok = await runRestore(stack[nextIdx]);
-    if (ok) {
-      historyIndexRef.current = nextIdx;
-      setDrawingState(nextIdx > 0);
-      bumpHistoryTick();
-    }
+    scheduleRestore(stack[nextIdx], nextIdx);
   };
 
   const getCanvasPointFromEvent = (e) => {
@@ -266,6 +252,14 @@ const SketchCanvas = forwardRef(function SketchCanvas(
   }, []);
 
   useEffect(() => {
+    const ctx = strokesCtxRef.current;
+    if (!ctx) return;
+    ctx.lineWidth = brushSize;
+    ctx.strokeStyle = brushColor;
+    ctx.globalCompositeOperation = tool === 'eraser' ? 'destination-out' : 'source-over';
+  }, [brushColor, brushSize, tool]);
+
+  useEffect(() => {
     if (!bgCtxRef.current || !bgCanvasRef.current) return;
     const normalized = String(backgroundImageUrl || '').trim();
     if (normalized === backgroundUrlRef.current) return;
@@ -276,6 +270,7 @@ const SketchCanvas = forwardRef(function SketchCanvas(
     const strokesCtx = strokesCtxRef.current;
     if (strokesCanvas && strokesCtx) strokesCtx.clearRect(0, 0, strokesCanvas.width, strokesCanvas.height);
     isDrawingRef.current = false;
+    didDrawRef.current = false;
     lastPointRef.current = { x: 0, y: 0 };
     setDrawingState(false);
     setTimeout(() => resetHistory(), 0);
@@ -333,9 +328,8 @@ const SketchCanvas = forwardRef(function SketchCanvas(
     if (!canvas || !ctx) return;
     e.preventDefault();
 
-    // 每一笔开始前存快照：撤回时能回到上一笔
-    pushHistory();
     isDrawingRef.current = true;
+    didDrawRef.current = false;
     const p = getCanvasPointFromEvent(e);
     lastPointRef.current = p;
 
@@ -352,6 +346,7 @@ const SketchCanvas = forwardRef(function SketchCanvas(
     const p = getCanvasPointFromEvent(e);
     const last = lastPointRef.current;
     if (!hasDrawing) setDrawingState(true);
+    didDrawRef.current = true;
     drawLine(last, p);
     lastPointRef.current = p;
   };
@@ -361,6 +356,7 @@ const SketchCanvas = forwardRef(function SketchCanvas(
   };
 
   const handlePointerUp = (e) => {
+    const hadDrawing = isDrawingRef.current;
     stopDrawing();
     const canvas = strokesCanvasRef.current;
     try {
@@ -368,9 +364,29 @@ const SketchCanvas = forwardRef(function SketchCanvas(
     } catch {
       // ignore
     }
+    if (hadDrawing && didDrawRef.current) {
+      pushHistory();
+    }
+    didDrawRef.current = false;
   };
 
-  const handlePointerCancel = () => stopDrawing();
+  const handlePointerCancel = () => {
+    const hadDrawing = isDrawingRef.current;
+    stopDrawing();
+    if (hadDrawing && didDrawRef.current) {
+      pushHistory();
+    }
+    didDrawRef.current = false;
+  };
+
+  const handlePointerLeave = () => {
+    const hadDrawing = isDrawingRef.current;
+    stopDrawing();
+    if (hadDrawing && didDrawRef.current) {
+      pushHistory();
+    }
+    didDrawRef.current = false;
+  };
 
   // 用 historyTick 触发重渲染，确保按钮禁用状态随历史变化刷新
   void historyTick;
@@ -389,6 +405,68 @@ const SketchCanvas = forwardRef(function SketchCanvas(
 
   return (
     <div className="sketch-canvasWrap">
+      <div className="sketch-tools">
+        <div className="sketch-toolGroup">
+          <Button
+            type={tool === 'brush' ? 'primary' : 'default'}
+            icon={<Brush size={16} />}
+            onClick={() => setTool('brush')}
+            className="sketch-toolBtn"
+          >
+            画笔
+          </Button>
+          <Button
+            type={tool === 'eraser' ? 'primary' : 'default'}
+            icon={<Eraser size={16} />}
+            onClick={() => setTool('eraser')}
+            className="sketch-toolBtn"
+          >
+            橡皮擦
+          </Button>
+        </div>
+
+        <div className="sketch-toolGroup sketch-toolGroup--grow">
+          <div className="sketch-toolLabel">粗细</div>
+          <Slider
+            min={BRUSH_SIZE_RANGE.min}
+            max={BRUSH_SIZE_RANGE.max}
+            value={brushSize}
+            onChange={setBrushSize}
+            className="sketch-sizeSlider"
+          />
+          <div className="sketch-sizeValue">{brushSize}</div>
+        </div>
+
+        <div className="sketch-toolGroup">
+          <div className="sketch-toolLabel">颜色</div>
+          <div className="sketch-colorRow">
+            {PRESET_COLORS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                className={c === brushColor ? 'sketch-colorDot sketch-colorDot--active' : 'sketch-colorDot'}
+                style={{ backgroundColor: c }}
+                onClick={() => {
+                  setBrushColor(c);
+                  setTool('brush');
+                }}
+                aria-label={`选择颜色 ${c}`}
+              />
+            ))}
+            <input
+              className="sketch-colorPicker"
+              type="color"
+              value={brushColor}
+              onChange={(e) => {
+                setBrushColor(e.target.value);
+                setTool('brush');
+              }}
+              aria-label="自定义颜色"
+            />
+          </div>
+        </div>
+      </div>
+
       <div className="sketch-canvasFrame">
         <canvas
           ref={bgCanvasRef}
@@ -406,7 +484,7 @@ const SketchCanvas = forwardRef(function SketchCanvas(
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
-          onPointerLeave={stopDrawing}
+          onPointerLeave={handlePointerLeave}
           onPointerCancel={handlePointerCancel}
           aria-label="草图笔触画布"
           role="application"

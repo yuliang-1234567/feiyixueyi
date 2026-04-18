@@ -12,6 +12,7 @@ const { authenticate } = require('../middleware/auth');
 const { generateQwenLearnAnalysis } = require('../utils/qwen');
 const { enhanceImageWithQwen, generateThenEnhanceWithQwen, generateDirectImageFallback } = require('../utils/qwenImageEdit');
 const { getStylePrompt } = require('../utils/heritageStyleMap');
+const { buildHeritageSketchPromptBundle } = require('../utils/heritageSketchPrompt');
 const { STYLE_SYSTEM, getStylesForScene } = require('../utils/styleSystem');
 const { PRODUCT_SYSTEM, getProductsForScene, inferProductLabelFromText } = require('../utils/productSystem');
 const HeritageQaMessage = require('../models/HeritageQaMessage');
@@ -2085,7 +2086,6 @@ router.post('/heritage-sketch-generate', authenticate, async (req, res) => {
       });
     }
 
-    const stylePrompt = getStylePrompt(styleKey, customStylePrompt);
     const allowedStyleKeys = getStylesForScene('heritage-sketch').map((s) => s.key);
     if (!styleKey || !allowedStyleKeys.includes(styleKey)) {
       return res.status(400).json({
@@ -2093,6 +2093,10 @@ router.post('/heritage-sketch-generate', authenticate, async (req, res) => {
         message: '请选择非遗风格',
       });
     }
+
+    const forwardedProto0 = (req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
+    const proto0 = forwardedProto0 || req.protocol;
+    const publicBaseUrl = `${proto0}://${req.get('host')}`.replace(/\/$/, '');
 
     const parseBase64ToBuffer = (raw) => {
       const cleaned = String(raw || '').trim();
@@ -2123,14 +2127,12 @@ router.post('/heritage-sketch-generate', authenticate, async (req, res) => {
       sketchFilePath = path.join(tempUploadDir, sketchFilename);
       await fs.promises.writeFile(sketchFilePath, compositeBuffer);
 
-      const forwardedProto = (req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
-      const proto = forwardedProto || req.protocol;
-      const baseUrl = `${proto}://${req.get('host')}`.replace(/\/$/, '');
-      sketchPublicUrl = `${baseUrl}/uploads/temp/${sketchFilename}`;
+      sketchPublicUrl = `${publicBaseUrl}/uploads/temp/${sketchFilename}`;
     }
 
     // 写入笔触层临时文件（透明底）
     let layerFilePath = null;
+    let layerPublicUrl = null;
     if (rawLayer) {
       const layerBuffer = parseBase64ToBuffer(rawLayer);
       if (!layerBuffer) {
@@ -2142,6 +2144,7 @@ router.post('/heritage-sketch-generate', authenticate, async (req, res) => {
       const layerFilename = `heritage-sketch-layer-${Date.now()}-${Math.round(Math.random() * 1e9)}.png`;
       layerFilePath = path.join(tempUploadDir, layerFilename);
       await fs.promises.writeFile(layerFilePath, layerBuffer);
+      layerPublicUrl = `${publicBaseUrl}/uploads/temp/${layerFilename}`;
     }
 
     // 下载产品底图（迁移图 URL）
@@ -2163,30 +2166,49 @@ router.post('/heritage-sketch-generate', authenticate, async (req, res) => {
       }
     }
 
-    // 提示词：不做额外判断/推断，直接把前端传来的字段拼到一起交给模型
-    const finalAiPrompt = [
-      '请根据以下“前端原样提供的信息”生成一张新的高质量电商效果图（背景干净、无水印无文字、主体清晰）。',
-      `styleKey=${String(styleKey || '').trim()}`,
-      `customStylePrompt=${String(customStylePrompt || '').trim()}`,
-      `description=${String(description || '').trim()}`,
-      `baseDescription=${String(baseDescription || '').trim()}`,
-      `currentDescription=${String(currentDescription || '').trim()}`,
-      `additionalDescription=${String(additionalDescription || '').trim()}`,
-      `productImageUrl=${String(productImageUrl || '').trim()}`,
-      `referenceImageUrl=${String(referenceImageUrl || '').trim()}`,
-      `hasProductImage=${String(Boolean(productFilePath))}`,
-      `hasSketchLayer=${String(Boolean(layerFilePath))}`,
-    ].join('\n');
+    const resolvedStylePrompt = getStylePrompt(styleKey, customStylePrompt);
+    const hasProductBase = Boolean(productFilePath);
+    const { aiPrompt: finalAiPrompt } = buildHeritageSketchPromptBundle({
+      description,
+      baseDescription,
+      currentDescription,
+      additionalDescription,
+      styleKey,
+      resolvedStylePrompt,
+      hasProductBase,
+    });
 
-    const basePathForAi = productFilePath || sketchFilePath;
-    const baseUrlForAi = productFilePath ? productUrl : sketchPublicUrl;
+    // 有产品底图（迁移/继续创作）且成功下载：底图 + 笔触层 双输入；否则仅以笔触层为单张输入（首次创作）
+    const useDualImage = Boolean(productFilePath && layerFilePath);
+    let basePathForAi;
+    let baseUrlForAi;
+    let referenceImagePathsOpt;
+    if (useDualImage) {
+      basePathForAi = productFilePath;
+      baseUrlForAi = productUrl;
+      referenceImagePathsOpt = [layerFilePath];
+    } else if (layerFilePath) {
+      basePathForAi = layerFilePath;
+      baseUrlForAi = layerPublicUrl;
+      referenceImagePathsOpt = [];
+    } else if (sketchFilePath) {
+      basePathForAi = sketchFilePath;
+      baseUrlForAi = sketchPublicUrl;
+      referenceImagePathsOpt = [];
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: '缺少有效草图输入',
+      });
+    }
 
-    const aiEnhanced = await enhanceImageWithQwen({
+    let aiEnhanced = await enhanceImageWithQwen({
       baseImagePath: basePathForAi,
       baseImageUrl: baseUrlForAi,
-      ...(layerFilePath ? { referenceImagePaths: [layerFilePath] } : {}),
+      ...(referenceImagePathsOpt.length ? { referenceImagePaths: referenceImagePathsOpt } : {}),
       productType: '文创产品',
-      stylePrompt,
+      // 风格已写入【定义风格】，此处不再追加，避免与 buildEditPrompt 重复
+      stylePrompt: '',
       aiPrompt: finalAiPrompt,
     });
 
@@ -2195,7 +2217,7 @@ router.post('/heritage-sketch-generate', authenticate, async (req, res) => {
       try {
         aiEnhanced = await generateDirectImageFallback({
           productType: '非遗纹样',
-          stylePrompt,
+          stylePrompt: '',
           aiPrompt: finalAiPrompt,
         });
       } catch (error) {

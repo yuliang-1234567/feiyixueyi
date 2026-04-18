@@ -22,6 +22,7 @@ import {
   WarningOutlined,
 } from '@ant-design/icons';
 import adminApi from '../../utils/adminApi';
+import AdminPageHeader from '../../components/admin/AdminPageHeader';
 
 const { Text } = Typography;
 
@@ -169,14 +170,17 @@ const AdminAiMonitor = () => {
 
   if (loading) {
     return (
-      <Card title="AI调用监控（P1）">
-        <Spin />
-      </Card>
+      <Card><Spin /></Card>
     );
   }
 
   return (
     <div>
+      <AdminPageHeader
+        title="AI 调用监控"
+        description="调用量、成功率、时延与成本的快速巡检"
+      />
+
       {error ? <Alert type="error" showIcon message={error} style={{ marginBottom: 16 }} /> : null}
 
       <Card style={{ marginBottom: 12 }}>

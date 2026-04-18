@@ -576,6 +576,28 @@ async function enhanceImageWithQwen(params) {
       refContents.push({ image: toDataUrlFromFile(p) });
     }
 
+    const promptContent = {
+      model,
+      input: {
+        messages: [
+          {
+            role: "user",
+            content: [
+              { image: imageInput },
+              ...refContents,
+              { text: prompt },
+            ],
+          },
+        ],
+      },
+      parameters: {
+        n: 1,
+        watermark: false,
+        prompt_extend: false,
+        size: "1024*1024",
+      },
+    }
+
     const resp = await axios.post(
       `${dashScopeOrigin}/api/v1/services/aigc/multimodal-generation/generation`,
       {

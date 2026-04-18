@@ -80,6 +80,8 @@ router.get('/dashboard/p1', async (req, res) => {
 			hotProducts,
 			productViews7d,
 			orders7d,
+			users7d,
+			paidOrdersAmount7d,
 			funnelProductViews7d,
 			funnelAddCartProxy7d,
 			funnelOrders7d,
@@ -129,6 +131,19 @@ router.get('/dashboard/p1', async (req, res) => {
 			Order.findAll({
 				where: { createdAt: { [Op.gte]: sevenDaysAgo } },
 				attributes: ['createdAt'],
+				raw: true,
+			}),
+			User.findAll({
+				where: { createdAt: { [Op.gte]: sevenDaysAgo } },
+				attributes: ['createdAt'],
+				raw: true,
+			}),
+			Order.findAll({
+				where: {
+					createdAt: { [Op.gte]: sevenDaysAgo },
+					status: { [Op.in]: paidStatuses },
+				},
+				attributes: ['createdAt', 'totalAmount'],
 				raw: true,
 			}),
 			View.count({
@@ -197,6 +212,32 @@ router.get('/dashboard/p1', async (req, res) => {
 			hourBuckets[hour].activity += 1;
 		}
 
+		const dayBuckets = Array.from({ length: 7 }, (_, i) => {
+			const d = new Date(sevenDaysAgo.getTime() + i * 24 * 60 * 60 * 1000);
+			const key = d.toISOString().slice(0, 10);
+			return { date: key, newUsers: 0, newOrders: 0, revenue: 0 };
+		});
+
+		const dayMap = new Map(dayBuckets.map((b) => [b.date, b]));
+
+		for (const row of users7d || []) {
+			const key = new Date(row.createdAt).toISOString().slice(0, 10);
+			const bucket = dayMap.get(key);
+			if (bucket) bucket.newUsers += 1;
+		}
+
+		for (const row of orders7d || []) {
+			const key = new Date(row.createdAt).toISOString().slice(0, 10);
+			const bucket = dayMap.get(key);
+			if (bucket) bucket.newOrders += 1;
+		}
+
+		for (const row of paidOrdersAmount7d || []) {
+			const key = new Date(row.createdAt).toISOString().slice(0, 10);
+			const bucket = dayMap.get(key);
+			if (bucket) bucket.revenue += Number(row.totalAmount || 0);
+		}
+
 		const topActiveHours = [...hourBuckets]
 			.sort((a, b) => b.activity - a.activity)
 			.slice(0, 5);
@@ -227,6 +268,15 @@ router.get('/dashboard/p1', async (req, res) => {
 					range: '近7天',
 					buckets: hourBuckets,
 					top: topActiveHours,
+				},
+				trend: {
+					range: '近7天',
+					days: dayBuckets.map((b) => ({
+						date: b.date,
+						newUsers: b.newUsers,
+						newOrders: b.newOrders,
+						revenue: Number(b.revenue.toFixed(2)),
+					})),
 				},
 				funnel: {
 					range: '近7天',

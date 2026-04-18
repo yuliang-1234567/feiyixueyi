@@ -5,6 +5,82 @@
   gap: 10px;
 }
 
+.sketch-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.sketch-toolGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sketch-toolGroup--grow {
+  flex: 1;
+  min-width: 240px;
+}
+
+.sketch-toolLabel {
+  font-weight: 700;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.sketch-toolBtn {
+  border-radius: 10px;
+}
+
+.sketch-sizeSlider {
+  flex: 1;
+  min-width: 140px;
+}
+
+.sketch-sizeValue {
+  width: 32px;
+  text-align: right;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.sketch-colorRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sketch-colorDot {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  cursor: pointer;
+  padding: 0;
+  transition: box-shadow 180ms ease, transform 180ms ease, border-color 180ms ease;
+}
+
+.sketch-colorDot:hover {
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.12);
+}
+
+.sketch-colorDot--active {
+  border-color: rgba(37, 99, 235, 0.6);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+}
+
+.sketch-colorPicker {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
 .sketch-canvasFrame {
   position: relative;
   width: 100%;
@@ -65,5 +141,11 @@
 
 .sketch-clearBtn {
   border-radius: 10px;
+}
+
+@media (max-width: 520px) {
+  .sketch-toolGroup--grow {
+    min-width: 100%;
+  }
 }
 
