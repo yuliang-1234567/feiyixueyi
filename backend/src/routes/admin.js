@@ -309,6 +309,31 @@ router.get('/ai-monitor/overview', async (req, res) => {
 	try {
 		await ensureAiLogTable();
 
+		const FEATURE_LABELS = {
+			heritage_qa: '非遗问答',
+			heritage_quiz: '答题闯关',
+			ai_learn: 'AI学艺',
+			transform: '数字焕新',
+			generate_product: '数字焕新',
+			heritage_sketch: '一笔成纹',
+			image_recognize: '图片识别',
+		};
+
+		const resolveFeatureLabel = (record) => {
+			const key = record?.feature || '';
+			if (FEATURE_LABELS[key]) return FEATURE_LABELS[key];
+
+			const endpoint = String(record?.endpoint || '');
+			if (endpoint.includes('/ai/ask-heritage')) return FEATURE_LABELS.heritage_qa;
+			if (endpoint.includes('/ai/quiz')) return FEATURE_LABELS.heritage_quiz;
+			if (endpoint.includes('/ai/learn')) return FEATURE_LABELS.ai_learn;
+			if (endpoint.includes('/ai/transform')) return FEATURE_LABELS.transform;
+			if (endpoint.includes('/ai/heritage-sketch-generate')) return FEATURE_LABELS.heritage_sketch;
+			if (endpoint.includes('/ar/recognize')) return FEATURE_LABELS.image_recognize;
+
+			return null;
+		};
+
 		const daysRaw = Number(req.query.days || 7);
 		const days = Number.isFinite(daysRaw) ? Math.max(1, Math.min(60, Math.floor(daysRaw))) : 7;
 		const startAt = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
@@ -332,19 +357,31 @@ router.get('/ai-monitor/overview', async (req, res) => {
 			order: [['createdAt', 'DESC']],
 		});
 
-		const totalCalls = logs.length;
-		const successCalls = logs.filter((item) => item.success).length;
+		const normalizedLogs = logs
+			.map((item) => {
+				const featureLabel = resolveFeatureLabel(item);
+				if (!featureLabel) return null;
+				return {
+					...item,
+					feature: featureLabel,
+					featureLabel,
+				};
+			})
+			.filter(Boolean);
+
+		const totalCalls = normalizedLogs.length;
+		const successCalls = normalizedLogs.filter((item) => item.success).length;
 		const failureCalls = totalCalls - successCalls;
-		const downgradedCalls = logs.filter((item) => item.downgraded).length;
-		const totalLatency = logs.reduce((sum, item) => sum + Number(item.latencyMs || 0), 0);
-		const totalCost = logs.reduce((sum, item) => sum + Number(item.costCny || 0), 0);
+		const downgradedCalls = normalizedLogs.filter((item) => item.downgraded).length;
+		const totalLatency = normalizedLogs.reduce((sum, item) => sum + Number(item.latencyMs || 0), 0);
+		const totalCost = normalizedLogs.reduce((sum, item) => sum + Number(item.costCny || 0), 0);
 
 		const successRate = totalCalls > 0 ? Number(((successCalls / totalCalls) * 100).toFixed(2)) : 0;
 		const avgLatencyMs = totalCalls > 0 ? Number((totalLatency / totalCalls).toFixed(2)) : 0;
 		const downgradeHitRate = totalCalls > 0 ? Number(((downgradedCalls / totalCalls) * 100).toFixed(2)) : 0;
 
 		const modelMap = new Map();
-		for (const item of logs) {
+		for (const item of normalizedLogs) {
 			const key = String(item.model || item.provider || 'unknown');
 			const prev = modelMap.get(key) || {
 				name: key,
@@ -373,7 +410,7 @@ router.get('/ai-monitor/overview', async (req, res) => {
 			.slice(0, 10);
 
 		const reasonMap = new Map();
-		for (const item of logs) {
+		for (const item of normalizedLogs) {
 			if (item.success) continue;
 			const reason = String(item.errorReason || 'unknown').trim() || 'unknown';
 			reasonMap.set(reason, (reasonMap.get(reason) || 0) + 1);
@@ -403,7 +440,7 @@ router.get('/ai-monitor/overview', async (req, res) => {
 				},
 				modelStats,
 				failureReasonTop,
-				recentLogs: logs.slice(0, 50),
+				recentLogs: normalizedLogs.slice(0, 50),
 			},
 		});
 	} catch (error) {

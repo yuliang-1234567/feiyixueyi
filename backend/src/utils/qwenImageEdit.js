@@ -3,7 +3,7 @@
  *
  * 策略：
  * - 生图优先：wan2.6-image > qwen-image-2.0（失败时兜底 qwen-image-2.0）
- * - 精修优先：qwen-image-edit-plus（编辑能力）
+ * - 精修优先：qwen-image-2.0（禁用 qwen-image-edit-plus）
  * - 每个模型按“OpenAI兼容接口 -> DashScope原生异步任务接口”双通道尝试
  * - 任一通道成功即返回；全部失败则业务层回退本地算法
  */
@@ -16,7 +16,6 @@ const OpenAI = require("openai");
 const DEFAULT_ALLOWED_MODELS = [
   "wan2.6-image",
   "qwen-image-2.0",
-  "wanx-v1",
 ];
 
 function parseAllowedModels() {
@@ -32,6 +31,7 @@ function parseAllowedModels() {
 function isModelAllowed(model, allowedModels) {
   const name = String(model || "").trim();
   if (!name) return false;
+  if (name === "qwen-image-edit-plus") return false;
   if (/free|trial/i.test(name)) return false;
   return allowedModels.includes(name);
 }
@@ -257,7 +257,7 @@ function getGeneratorModelCandidates(allowedModels) {
     ''
   ).trim();
 
-  const defaults = ['wan2.6-image', 'qwen-image-2.0', 'wanx-v1'];
+  const defaults = ['wan2.6-image', 'qwen-image-2.0'];
   const fromChain = chainRaw
     .split(',')
     .map((item) => item.trim())
@@ -280,18 +280,19 @@ function getGeneratorModelCandidates(allowedModels) {
 
 function getEnhancerModel(modelChain, allowedModels) {
   const explicit = String(process.env.QWEN_IMAGE_ENHANCE_MODEL || '').trim();
-  if (explicit && isModelAllowed(explicit, allowedModels)) {
+  if (explicit && explicit !== 'qwen-image-edit-plus' && isModelAllowed(explicit, allowedModels)) {
     return explicit;
   }
 
   const candidates = [
-    'qwen-image-edit-plus',
+    'qwen-image-2.0',
     ...modelChain,
     ...allowedModels,
   ];
 
   for (const model of candidates) {
     if (!isModelAllowed(model, allowedModels)) continue;
+    if (model === 'qwen-image-edit-plus') continue;
     if (!isQwenImageFamilyModel(model)) continue;
     return model;
   }
@@ -839,54 +840,53 @@ async function enhanceImageWithQwen(params) {
       }
     }
 
-    // 通道1：OpenAI兼容接口
-    try {
-      const buffer = await tryOpenAICompatible(model);
+    // 通道1：OpenAI兼容接口（仅对 qwen-image 模型尝试，避免 wan* 的无效 404）
+    if (isQwenImageFamilyModel(model)) {
+      try {
+        const buffer = await tryOpenAICompatible(model);
 
-      if (!buffer || buffer.length === 0) {
+        if (!buffer || buffer.length === 0) {
+          console.warn(
+            `⚠️ [Qwen-Image] 模型 ${model} 兼容接口返回为空，尝试原生接口`
+          );
+        } else {
+          return {
+            buffer,
+            provider: "dashscope-openai-compatible",
+            model,
+            triedModels,
+          };
+        }
+      } catch (error) {
+        const parsed = parseHttpError(error);
         console.warn(
-          `⚠️ [Qwen-Image] 模型 ${model} 兼容接口返回为空，尝试原生接口`
+          `⚠️ [Qwen-Image] 模型 ${model} 兼容接口失败: ${
+            parsed.message
+          } (status=${parsed.status || "N/A"}, code=${
+            parsed.code || "N/A"
+          }, requestId=${parsed.requestId || "N/A"})`
         );
-      } else {
-        return {
-          buffer,
-          provider: "dashscope-openai-compatible",
-          model,
-          triedModels,
-        };
-      }
-    } catch (error) {
-      const parsed = parseHttpError(error);
-      console.warn(
-        `⚠️ [Qwen-Image] 模型 ${model} 兼容接口失败: ${
-          parsed.message
-        } (status=${parsed.status || "N/A"}, code=${
-          parsed.code || "N/A"
-        }, requestId=${parsed.requestId || "N/A"})`
-      );
-      if (parsed.data) {
-        console.warn(
-          "⚠️ [Qwen-Image] 兼容接口失败详情:",
-          JSON.stringify(parsed.data).slice(0, 1200)
-        );
-      }
-      if (isRateLimitCode(parsed.code)) {
-        console.error(
-          "❌ [Qwen-Image] 命中频率限制，停止后续模型尝试，避免继续消耗配额"
-        );
-        break;
+        if (parsed.data) {
+          console.warn(
+            "⚠️ [Qwen-Image] 兼容接口失败详情:",
+            JSON.stringify(parsed.data).slice(0, 1200)
+          );
+        }
+        if (isRateLimitCode(parsed.code)) {
+          console.error(
+            "❌ [Qwen-Image] 命中频率限制，停止后续模型尝试，避免继续消耗配额"
+          );
+          break;
+        }
       }
     }
 
     // 通道2：DashScope原生异步任务接口
     try {
-      // wanx/wan2.* 等模型如果没有公网 URL，大概率会被 URL 校验卡住；此时跳过以减少噪声与无效请求
-      if (
-        !isQwenImageFamilyModel(model) &&
-        (!baseImageUrl || isPrivateOrLocalhostUrl(baseImageUrl))
-      ) {
+      // image2image 编辑阶段仅尝试 qwen-image 模型，避免 wan* 的无效 URL 报错
+      if (!isQwenImageFamilyModel(model)) {
         console.warn(
-          `⚠️ [Qwen-Image] 模型 ${model} 需要公网 URL；当前为 localhost/私网，跳过原生接口尝试`
+          `⚠️ [Qwen-Image] 模型 ${model} 不参与 image2image 编辑阶段，跳过原生接口尝试`
         );
         continue;
       }

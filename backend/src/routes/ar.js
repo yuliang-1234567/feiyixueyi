@@ -3,9 +3,59 @@ const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
 const ARContent = require('../models/ARContent');
+const AIInvocationLog = require('../models/AIInvocationLog');
 const { generateQwenRecognitionAnalysis } = require('../utils/qwen');
 
 const router = express.Router();
+
+let ensureAiLogTablePromise = null;
+
+async function ensureAiLogTable() {
+  if (!ensureAiLogTablePromise) {
+    ensureAiLogTablePromise = AIInvocationLog.sync().catch((error) => {
+      ensureAiLogTablePromise = null;
+      throw error;
+    });
+  }
+  await ensureAiLogTablePromise;
+}
+
+function normalizeFailureReason(errorLike) {
+  const raw = String(
+    errorLike?.message ||
+    errorLike?.error ||
+    errorLike ||
+    ''
+  ).trim();
+  if (!raw) return 'unknown';
+  if (/rate|throttl|quota/i.test(raw)) return 'rate_limit';
+  if (/timeout|timed out|etimedout/i.test(raw)) return 'timeout';
+  if (/auth|unauthoriz|api key|forbidden|401|403/i.test(raw)) return 'auth_error';
+  if (/network|socket|connect|dns|econn/i.test(raw)) return 'network_error';
+  if (/invalid|bad request|参数|格式/i.test(raw)) return 'invalid_request';
+  return raw.slice(0, 200);
+}
+
+async function logAiInvocation(payload = {}) {
+  try {
+    await ensureAiLogTable();
+    await AIInvocationLog.create({
+      userId: payload.userId || null,
+      feature: String(payload.feature || 'unknown'),
+      endpoint: String(payload.endpoint || 'unknown'),
+      provider: payload.provider ? String(payload.provider) : null,
+      model: payload.model ? String(payload.model) : null,
+      success: Boolean(payload.success),
+      latencyMs: Number(payload.latencyMs || 0),
+      downgraded: Boolean(payload.downgraded),
+      costCny: Number(payload.costCny || 0),
+      errorReason: payload.errorReason ? String(payload.errorReason) : null,
+      metadata: payload.metadata && typeof payload.metadata === 'object' ? payload.metadata : {},
+    });
+  } catch (error) {
+    console.warn('⚠️ [AI Monitor] 写入调用日志失败:', error.message);
+  }
+}
 
 const tempUploadDir = path.join(__dirname, '../../uploads/temp');
 if (!fs.existsSync(tempUploadDir)) {
@@ -123,6 +173,7 @@ router.post('/scan', async (req, res) => {
 
 // 图片识别（通过图片匹配AR内容）
 router.post('/recognize', recognizeUpload.single('image'), async (req, res) => {
+  const startMs = Date.now();
   try {
     const { imageUrl, markerId } = req.body;
 
@@ -145,6 +196,19 @@ router.post('/recognize', recognizeUpload.single('image'), async (req, res) => {
         provider: aiResult.provider,
         model: aiResult.model,
       });
+
+      await logAiInvocation({
+        userId: null,
+        feature: 'image_recognize',
+        endpoint: '/ar/recognize',
+        provider: aiResult.provider || null,
+        model: aiResult.model || null,
+        success: true,
+        latencyMs: Date.now() - startMs,
+        downgraded: false,
+        costCny: 0,
+      });
+
       return res.json({
         success: true,
         data: {
@@ -174,6 +238,19 @@ router.post('/recognize', recognizeUpload.single('image'), async (req, res) => {
       model: 'legacy-ar-matcher',
     });
 
+    await logAiInvocation({
+      userId: null,
+      feature: 'image_recognize',
+      endpoint: '/ar/recognize',
+      provider: 'local-fallback',
+      model: 'legacy-ar-matcher',
+      success: false,
+      latencyMs: Date.now() - startMs,
+      downgraded: true,
+      costCny: 0,
+      errorReason: 'local_fallback',
+    });
+
     res.json({
       success: true,
       data: {
@@ -188,6 +265,18 @@ router.post('/recognize', recognizeUpload.single('image'), async (req, res) => {
       }
     });
   } catch (error) {
+    await logAiInvocation({
+      userId: null,
+      feature: 'image_recognize',
+      endpoint: '/ar/recognize',
+      provider: null,
+      model: null,
+      success: false,
+      latencyMs: Date.now() - startMs,
+      downgraded: false,
+      costCny: 0,
+      errorReason: normalizeFailureReason(error),
+    });
     res.status(500).json({
       success: false,
       message: '识别失败',

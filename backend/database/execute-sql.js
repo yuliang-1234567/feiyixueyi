@@ -24,7 +24,7 @@ async function executeSQL() {
     console.log('✅ 已连接到 MySQL 服务器');
 
     // 读取 SQL 文件
-    const sqlFile = path.join(__dirname, 'init.sql');
+    const sqlFile = path.join(__dirname, 'all_in_one_safe_upgrade.sql');
     const sql = fs.readFileSync(sqlFile, 'utf8');
 
     // 执行 SQL

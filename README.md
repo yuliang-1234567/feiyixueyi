@@ -1,36 +1,42 @@
-# AI驱动的"非遗"技艺沉浸式学习与文创平台
+# AI驱动的非遗技艺沉浸式学习与文创平台
 
 ## 项目简介
 
-本项目是一个前后端分离的非物质文化遗产（非遗）技艺学习与文创平台，通过AI技术实现：
-- **AI学艺**：通过计算机视觉技术进行轮廓比对、相似度评分和改进建议
-- **数字焕新**：将非遗纹样应用到现代物品上进行预览和定制
-- **AR识物**：扫描线下文物或特定图片，显示3D动画和讲解
-- **文创商城**：购买由用户生成或官方合作的文创产品
+本项目是一个前后端分离的非遗数字化平台，覆盖学习、创作、管理与多端展示全流程，核心能力包括：
+
+- AI学艺：作品轮廓比对、相似度评分、结构化学习建议
+- AI问答：围绕非遗知识的对话问答与历史记录
+- 答题闯关：题库出题、闯关评分、收藏与历史回看
+- 一笔成纹：基于描述和主题快速生成纹样草图
+- 数字焕新：纹样与文创样机融合生成效果图
+- 后台管理：用户、作品、商品、订单、收藏、AI调用监控
+- 多端展示：Web与微信小程序协同展示与使用
 
 ## 技术栈
 
 ### 后端
+
 - Node.js + Express
-- Sequelize + MySQL 8.0（数据库ORM）
-- Sharp（图像处理，有预编译二进制，Windows友好）
-- JWT（身份认证）
-- OpenAI API（可选，用于AI功能）
+- Sequelize + MySQL 8.0
+- JWT + bcryptjs（认证与安全）
+- Sharp + Multer（图像处理与上传）
+- DashScope/Qwen + OpenAI SDK（AI能力接入）
 
 ### Web端
-- React + TypeScript
-- TensorFlow.js / OpenCV.js
-- Ant Design / Material-UI
-- Axios
+
+- React 18 + React Router
+- Ant Design + ECharts
+- Axios + Zustand
+- TensorFlow.js（前端AI相关能力）
 
 ### 小程序端
-- 微信小程序
-- AR能力
-- 云开发 / 云函数
+
+- 微信小程序原生框架
+- 覆盖首页、画廊、学习、AI学艺、商城、个人中心等页面
 
 ## 项目结构
 
-```
+```text
 ihc/
 ├── backend/          # 后端API服务
 ├── web/              # React Web前端
@@ -42,253 +48,205 @@ ihc/
 
 ### 前置要求
 
-- Node.js >= 16.0.0
+- Node.js >= 16
+- npm >= 8
 - MySQL >= 8.0
-- npm 或 yarn
 
-### 1. 克隆项目
+### 1. 安装依赖
 
-```bash
-git clone <repository-url>
-cd ihc
-```
+在项目根目录执行：
 
-### 2. 安装依赖
-
-```bash
-# 安装根目录依赖
-npm install
-
-# 安装后端依赖
-cd backend
-npm install
-
-# 安装前端依赖
-cd ../web
-npm install
-```
-
-或者使用一键安装：
 ```bash
 npm run install:all
 ```
 
-### 3. 配置环境变量
+### 2. 配置环境变量
 
-#### 后端配置 (backend/.env)
-
-在 `backend` 目录下创建 `.env` 文件，参考 `backend/ENV_CONFIG.md` 中的说明：
+后端配置文件：`backend/.env`
 
 ```env
-PORT=3000
+PORT=3100
 NODE_ENV=development
+
 DB_HOST=localhost
 DB_PORT=3306
 DB_NAME=ihc
 DB_USER=root
-DB_PASSWORD=123456
-JWT_SECRET=your_jwt_secret_key_here_change_in_production
+DB_PASSWORD=your_mysql_password
+
+JWT_SECRET=change-this-to-a-random-secret
 JWT_EXPIRE=7d
-OPENAI_API_KEY=your_openai_api_key_here
-UPLOAD_DIR=./uploads
-MAX_FILE_SIZE=10485760
+
 CORS_ORIGIN=http://localhost:3001
-MINIPROGRAM_APPID=your_miniprogram_appid
-MINIPROGRAM_SECRET=your_miniprogram_secret
 ```
 
-> 📝 **注意**: 详细的环境变量配置说明请查看 [backend/ENV_CONFIG.md](./backend/ENV_CONFIG.md)
-
-#### Web端配置 (web/.env)
-
-在 `web` 目录下创建 `.env` 文件：
+Web 配置文件：`web/.env.development`
 
 ```env
-REACT_APP_API_URL=http://localhost:3000/api
-REACT_APP_UPLOAD_URL=http://localhost:3000/uploads
+PORT=3001
+REACT_APP_API_URL=http://localhost:3100/api
+REACT_APP_LOCAL_API_URL=http://localhost:3100/api
 ```
 
-### 4. 启动MySQL并创建数据库
+可选 AI 环境变量（未配置时部分能力会降级或回退）：
 
-确保MySQL 8.0服务正在运行：
+- `QWEN_API_KEY`
+- `DASHSCOPE_API_KEY`
+- `DEEPSEEK_API_KEY`
 
-```bash
-# Windows
-# 启动MySQL服务（通过服务管理器或命令行）
-
-# macOS (使用Homebrew)
-brew services start mysql@8.0
-
-# Linux
-sudo systemctl start mysql
-```
-
-创建数据库：
-
-```bash
-# 登录MySQL
-mysql -u root -p123456
-
-# 执行SQL脚本
-source backend/database/init.sql
-
-# 或直接执行
-mysql -u root -p123456 < backend/database/init.sql
-```
-
-### 5. 启动开发服务器
-
-#### 启动后端服务
+### 3. 初始化数据库
 
 ```bash
 cd backend
-npm run dev
+npm run db:init
+cd ..
 ```
 
-后端服务将在 http://localhost:3000 启动
+### 4. 启动服务
 
-#### 启动Web前端
+终端 A：
 
 ```bash
-cd web
-npm start
+npm run dev:backend
 ```
 
-Web前端将在 http://localhost:3001 启动（React默认端口）
+终端 B：
 
-### 6. 小程序开发
+```bash
+npm run dev:web
+```
 
-1. 使用微信开发者工具打开 `miniprogram` 目录
-2. 在 `project.config.json` 中配置你的小程序 AppID
-3. 修改 `app.js` 中的 `apiUrl` 为你的后端API地址
-4. 开始开发
+### 5. 健康检查
 
-## API接口文档
+- 后端健康检查：`http://localhost:3100/api/health`
+- Web 首页：`http://localhost:3001`
 
-### 认证相关
+## 主要接口
 
-- `POST /api/auth/register` - 用户注册
-- `POST /api/auth/login` - 用户登录
-- `GET /api/auth/me` - 获取当前用户信息（需要认证）
+### 认证与用户
 
-### 用户相关
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /api/auth/me`
+- `GET /api/users`
+- `PUT /api/users/:id`
 
-- `GET /api/users` - 获取用户列表（需要认证）
-- `GET /api/users/:id` - 获取用户详情（需要认证）
-- `PUT /api/users/:id` - 更新用户信息（需要认证）
+### AI与学习能力
 
-### 作品相关
+- `POST /api/ai/learn`：AI学艺评分与建议
+- `POST /api/ai/ask-heritage`：AI问答
+- `GET /api/ai/heritage-qa-history`：问答历史
+- `GET /api/ai/quiz/challenge/start`：开始闯关
+- `POST /api/ai/quiz/challenge/submit`：提交闯关答案
+- `GET /api/ai/quiz/challenge/history`：闯关历史
+- `POST /api/ai/quiz/favorites/toggle`：题目收藏切换
+- `GET /api/ai/quiz/favorites`：收藏题目列表
+- `POST /api/ai/heritage-sketch-generate`：一笔成纹
+- `POST /api/ai/generate-product`：数字焕新文创图生成
+- `POST /api/ai/transform`：图像融合与转换
 
-- `GET /api/artworks` - 获取作品列表
-- `GET /api/artworks/:id` - 获取作品详情
-- `POST /api/artworks` - 创建作品（需要认证）
-- `POST /api/artworks/:id/like` - 点赞作品（需要认证）
+### 内容与交易
 
-### AI功能
+- `GET /api/artworks`
+- `POST /api/artworks`
+- `GET /api/products`
+- `POST /api/products`
+- `GET /api/orders`
+- `POST /api/orders`
+- `GET /api/ar`
+- `POST /api/ar/scan`
 
-- `POST /api/ai/learn` - AI学艺（轮廓比对和相似度评分）
-- `POST /api/ai/transform` - 数字焕新（风格迁移）
+### 后台管理（Admin）
 
-### 产品相关
+- `GET /api/admin/overview`：综合看板
+- `GET /api/admin/users`：用户管理
+- `GET /api/admin/artworks`：作品管理
+- `GET /api/admin/products`：商品管理
+- `GET /api/admin/orders`：订单管理
+- `GET /api/admin/favorites/artworks`：作品收藏统计
+- `GET /api/admin/favorites/quiz`：答题收藏统计
+- `GET /api/admin/ai-monitor/overview`：AI调用监控
 
-- `GET /api/products` - 获取产品列表
-- `GET /api/products/:id` - 获取产品详情
-- `POST /api/products` - 创建产品（需要认证）
-- `PATCH /api/products/:id/status` - 更新产品状态（需要管理员权限）
-
-### 订单相关
-
-- `GET /api/orders` - 获取订单列表（需要认证）
-- `POST /api/orders` - 创建订单（需要认证）
-
-### AR相关
-
-- `GET /api/ar` - 获取AR内容列表
-- `POST /api/ar/scan` - 扫描标识物获取AR内容
-
-## 核心功能
+## 核心功能模块
 
 ### 1. AI学艺
-- 用户上传剪纸或绘画作品
-- AI进行轮廓比对和相似度评分
-- 提供改进建议
 
-### 2. 数字焕新
-- 上传非遗纹样
-- AI风格迁移应用到现代物品
-- 预览和定制
+- 上传作品并进行图像预处理
+- 本地算法计算相似度评分
+- 调用大模型输出结构化学习建议
 
-### 3. AR识物
-- 扫描文物或特定图片
-- 显示3D动画和讲解
-- 学习技艺历史
+### 2. AI问答
 
-### 4. 文创商城
-- 浏览文创产品
-- 购买定制产品
-- 订单管理
+- 非遗知识问答
+- 对话上下文与历史记录
+- 接口级限流与失败回退
 
-## API文档
+### 3. 答题闯关
 
-API文档地址：http://localhost:3000/api-docs
+- 闯关抽题与题型兼容（单选/多选/判断）
+- 自动判分与战绩沉淀
+- 收藏题目与历史回看
 
-## 开发规范
+### 4. 一笔成纹
 
-- 使用TypeScript进行类型检查
-- 遵循ESLint代码规范
-- 提交前运行测试
-- 代码审查后合并
+- 根据风格与主题生成纹样草图提示
+- 支持与后续数字焕新流程联动
 
-## 详细文档
+### 5. 数字焕新
 
-- [项目设置指南](./SETUP.md) - 详细的设置和配置说明
-- [项目总结](./PROJECT_SUMMARY.md) - 项目架构和功能说明
-- [环境配置说明](./backend/ENV_CONFIG.md) - 后端环境变量配置
+- 纹样上传、文本描述或图文组合输入
+- 生成文创样机效果图
+- 支持生成失败时的兜底策略
+
+### 6. 后台管理系统
+
+- Web 后台路由与鉴权保护
+- 用户、作品、商品、订单全链路管理
+- AI调用成本、成功率与降级情况监控
+
+### 7. 小程序多端展示
+
+- 小程序与Web共享后端API
+- 覆盖首页、画廊、学习、AI学艺、商城、个人中心
+- 支持作品浏览、互动与学习记录沉淀
 
 ## 常见问题
 
-### MySQL连接失败
-- 检查MySQL服务是否运行
-- 检查 `DB_HOST`, `DB_USER`, `DB_PASSWORD` 配置是否正确
-- 确保数据库 `ihc` 已创建
-- 检查MySQL用户权限
+### 1. 数据库连接失败
 
-### 端口被占用
-- 修改 `.env` 文件中的 `PORT` 配置
-- 或关闭占用端口的进程
+- 检查 MySQL 服务是否运行
+- 检查 `backend/.env` 中 `DB_*` 配置
+- 确保已执行 `npm run db:init`
 
-### 文件上传失败
-- 检查 `uploads` 目录权限
-- 检查文件大小是否超过限制
+### 2. 前端能打开但接口失败
 
-### 依赖安装失败（TensorFlow相关）
-- 项目已移除 `@tensorflow/tfjs-node` 依赖，避免 Windows 编译问题
-- 后端使用 Sharp 进行图像处理（有预编译二进制）
-- AI功能主要在前端使用 TensorFlow.js 实现
-- 详细说明请查看 [backend/CHANGELOG.md](./backend/CHANGELOG.md) 和 [backend/TROUBLESHOOTING.md](./backend/TROUBLESHOOTING.md)
+- 检查 `web/.env.development` 中 API 地址是否与后端端口一致
+- 检查 `backend/.env` 的 `CORS_ORIGIN`
 
-### Sharp 模块安装失败
-- 如果遇到 `Cannot find module '../build/Release/sharp-win32-x64.node'` 错误
-- 运行修复脚本：`cd backend && npm run fix:sharp`
-- 或手动重新安装：`npm uninstall sharp && npm install sharp --platform=win32 --arch=x64`
-- 详细说明请查看 [backend/SHARP_FIX.md](./backend/SHARP_FIX.md) 和 [backend/TROUBLESHOOTING.md](./backend/TROUBLESHOOTING.md)
+### 3. Sharp 安装失败
+
+- 在 `backend` 目录执行：`npm run fix:sharp`
+
+### 4. AI功能不可用
+
+- 检查 `QWEN_API_KEY` 或 `DASHSCOPE_API_KEY`
+- 未配置时，部分接口会使用本地模板或回退策略
 
 ## 技术亮点
 
-- ✨ **AI驱动**: 前端使用TensorFlow.js实现AI分析，后端使用Sharp进行图像处理
-- 🎨 **数字焕新**: 将传统非遗纹样应用到现代物品
-- 📱 **AR体验**: 小程序AR扫描功能，增强互动体验
-- 🛍️ **文创商城**: 完整的电商功能，支持定制产品
-- 🔐 **安全认证**: JWT身份认证，保护用户数据
-- 📊 **数据管理**: MongoDB数据库，支持复杂数据关系
-- ⚡ **跨平台**: Windows/Mac/Linux 友好，无需编译原生模块
+- AI驱动学习闭环：评分 + 建议 + 训练路径
+- 创作转化闭环：一笔成纹 + 数字焕新 + 商品发布
+- 管理闭环：后台管理 + AI监控 + 数据看板
+- 多端协同：Web 与微信小程序统一后端能力
+- 工程可落地：限流、错误处理、降级与日志追踪
 
-## 贡献指南
+## 详细文档
 
-欢迎提交Issue和Pull Request！
+- [安装文档](./INSTALL.md)
+- [项目设置指南](./SETUP.md)
+- [后端环境变量说明](./backend/ENV_CONFIG.md)
+- [后端故障排查](./backend/TROUBLESHOOTING.md)
 
 ## 许可证
 
 MIT License
-
-## readme

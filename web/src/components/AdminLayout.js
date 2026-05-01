@@ -93,6 +93,7 @@ const AdminLayout = () => {
 			selectedKeys={[selectedKey]}
 			items={menuItems}
 			onClick={() => setMobileOpen(false)}
+			className="adminNavMenu"
 		/>
 	);
 
@@ -109,7 +110,7 @@ const AdminLayout = () => {
 							</Title>
 							<Text className="adminBrandSubtitle">Admin Panel</Text>
 						</div>
-						{adminMenu}
+						<div className="adminSiderMenu">{adminMenu}</div>
 						<div className="adminSiderFooter">
 							<Button block icon={<LogoutOutlined />} onClick={handleLogout}>
 								退出登录
@@ -149,10 +150,10 @@ const AdminLayout = () => {
 					open={mobileOpen}
 					onClose={() => setMobileOpen(false)}
 					width={280}
-					bodyStyle={{ padding: 0 }}
+					bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column', height: '100%' }}
 				>
-					{adminMenu}
-					<div style={{ padding: 12 }}>
+					<div className="adminDrawerMenu">{adminMenu}</div>
+					<div className="adminDrawerFooter">
 						<Button block icon={<LogoutOutlined />} onClick={handleLogout}>
 							退出登录
 						</Button>

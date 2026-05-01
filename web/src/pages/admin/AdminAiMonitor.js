@@ -26,6 +26,30 @@ import AdminPageHeader from '../../components/admin/AdminPageHeader';
 
 const { Text } = Typography;
 
+const FEATURE_LABELS = {
+  heritage_qa: '非遗问答',
+  heritage_quiz: '答题闯关',
+  ai_learn: 'AI学艺',
+  transform: '数字焕新',
+  heritage_sketch: '一笔成纹',
+  image_recognize: '图片识别',
+};
+
+function resolveFeatureLabel(record) {
+  if (record?.featureLabel) return record.featureLabel;
+  const featureKey = record?.feature || '';
+  if (FEATURE_LABELS[featureKey]) return FEATURE_LABELS[featureKey];
+
+  const endpoint = String(record?.endpoint || '');
+  if (endpoint.includes('/ai/ask-heritage')) return FEATURE_LABELS.heritage_qa;
+  if (endpoint.includes('/ai/quiz')) return FEATURE_LABELS.heritage_quiz;
+  if (endpoint.includes('/ai/learn')) return FEATURE_LABELS.ai_learn;
+  if (endpoint.includes('/ai/transform')) return FEATURE_LABELS.transform;
+  if (endpoint.includes('/ai/heritage-sketch-generate')) return FEATURE_LABELS.heritage_sketch;
+  if (endpoint.includes('/ar/recognize')) return FEATURE_LABELS.image_recognize;
+  return '';
+}
+
 const AdminAiMonitor = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -118,6 +142,7 @@ const AdminAiMonitor = () => {
       dataIndex: 'feature',
       key: 'feature',
       width: 140,
+      render: (_, record) => resolveFeatureLabel(record),
     },
     {
       title: '模型',

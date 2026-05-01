@@ -69,12 +69,16 @@ const Footer = () => {
                 <span>湖北省武汉市</span>
               </li>
               <li className="footer-qrRow">
+                <div className="footer-qrBlock">
+                  <div className="footer-qrTitle">非遗学艺小程序</div>
                   <img
                     className="footer-qrImage"
-                    src={`${process.env.PUBLIC_URL || ''}/images/miniapp-qr.png`}
-                    alt="小程序二维码"
+                    src="/images/xiaochengxu.png"
+                    alt="非遗学艺小程序二维码"
                     loading="lazy"
                   />
+                  <div className="footer-qrHint">扫码体验：AI学艺 / 图片识别 / 非遗学习</div>
+                </div>
               </li>
             </ul>
           </Col>

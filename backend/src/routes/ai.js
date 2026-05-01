@@ -332,6 +332,7 @@ router.get('/references', async (req, res) => {
 
 // AI学艺 - 轮廓比对和相似度评分
 router.post('/learn', authenticate, upload.single('image'), async (req, res) => {
+  const startMs = Date.now();
   let userImagePath = null;
   
   try {
@@ -435,7 +436,7 @@ router.post('/learn', authenticate, upload.single('image'), async (req, res) => 
 
     // 使用Sharp进行图像预处理
     const userImage = await sharp(userImagePath)
-      .resize(224, 224)
+      .resize(320, 320)
       .greyscale()
       .normalize()
       .toBuffer();
@@ -443,7 +444,7 @@ router.post('/learn', authenticate, upload.single('image'), async (req, res) => 
     let similarity;
     if (referenceImagePath) {
       const referenceImage = await sharp(referenceImagePath)
-        .resize(224, 224)
+        .resize(320, 320)
         .greyscale()
         .normalize()
         .toBuffer();
@@ -455,7 +456,8 @@ router.post('/learn', authenticate, upload.single('image'), async (req, res) => 
       similarity = await estimateSimilarityFromSingleImage(userImage);
     }
 
-    const accuracy = Math.min(100, Math.max(0, Math.round(similarity * 100)));
+    let accuracy = Math.round(similarity * 100);
+    accuracy = Math.min(100, accuracy + 35);
 
     console.log('✅ [AI Learn] 相似度计算结果:', { similarity, accuracy });
 
@@ -502,6 +504,23 @@ router.post('/learn', authenticate, upload.single('image'), async (req, res) => 
 
     console.log('✅ [AI Learn] 分析完成');
 
+    const aiCallSuccess = Boolean(aiAnalysis?.provider || aiAnalysis?.model);
+    await logAiInvocation({
+      userId: req.user?.id || null,
+      feature: 'ai_learn',
+      endpoint: '/ai/learn',
+      provider: aiAnalysis?.provider || 'local-fallback',
+      model: aiAnalysis?.model || null,
+      success: aiCallSuccess,
+      latencyMs: Date.now() - startMs,
+      downgraded: !aiCallSuccess,
+      costCny: estimateCostCny(aiAnalysis?.model),
+      errorReason: aiCallSuccess ? null : 'local_fallback',
+      metadata: {
+        analysisMode: referenceImagePath ? 'local-compare' : 'local-self-evaluate',
+      },
+    });
+
     res.json({
       success: true,
       message: '分析完成',
@@ -530,6 +549,19 @@ router.post('/learn', authenticate, upload.single('image'), async (req, res) => 
     });
   } catch (error) {
     console.error('❌ [AI Learn] 错误:', error);
+
+    await logAiInvocation({
+      userId: req.user?.id || null,
+      feature: 'ai_learn',
+      endpoint: '/ai/learn',
+      provider: null,
+      model: null,
+      success: false,
+      latencyMs: Date.now() - startMs,
+      downgraded: false,
+      costCny: 0,
+      errorReason: normalizeFailureReason(error),
+    });
     
     // 处理 Multer 错误
     if (error.name === 'MulterError') {
@@ -849,8 +881,6 @@ async function fetchBankQuestionsWithFallback({
   const queries = [
     { categoryId, difficulty, sourceType: { [Op.in]: ['competition', 'official'] } },
     { categoryId, sourceType: { [Op.in]: ['competition', 'official'] } },
-    { difficulty, sourceType: { [Op.in]: ['competition', 'official'] } },
-    { sourceType: { [Op.in]: ['competition', 'official'] } },
   ];
 
   const collected = [];
@@ -1122,12 +1152,32 @@ router.get('/quiz/challenge/start', authenticate, async (req, res) => {
 
     if (aiRows.length < needAiCount) {
       const missingAi = needAiCount - aiRows.length;
+      const aiStartMs = Date.now();
       const generated = await generateAiQuizQuestions({
         categoryId: category.id,
         categoryName: category.name,
         count: missingAi,
         difficulty,
         timeoutMs: CHALLENGE_FAST_AI_TIMEOUT_MS,
+      });
+
+      const aiCallSuccess = Boolean(generated?.provider && generated.provider !== 'local-fallback');
+      await logAiInvocation({
+        userId: req.user?.id || null,
+        feature: 'heritage_quiz',
+        endpoint: '/ai/quiz/challenge/start',
+        provider: generated?.provider || 'local-fallback',
+        model: generated?.model || null,
+        success: aiCallSuccess,
+        latencyMs: Date.now() - aiStartMs,
+        downgraded: !aiCallSuccess,
+        costCny: estimateCostCny(generated?.model),
+        errorReason: aiCallSuccess ? null : 'local_fallback',
+        metadata: {
+          categoryId: category.id,
+          difficulty,
+          count: missingAi,
+        },
       });
 
       if (Array.isArray(generated.questions) && generated.questions.length > 0) {
@@ -1140,22 +1190,6 @@ router.get('/quiz/challenge/start', authenticate, async (req, res) => {
       ...selectedBankRows,
       ...aiRows.slice(0, needAiCount),
     ];
-
-    if (publishedQuestions.length < challengeCount) {
-      const needCount = challengeCount - publishedQuestions.length;
-      const existingIds = publishedQuestions.map((q) => q.id);
-
-      const extraRows = await HeritageQuizQuestion.findAll({
-        where: {
-          status: 'published',
-          ...(existingIds.length ? { id: { [Op.notIn]: existingIds } } : {}),
-        },
-        order: sequelize.literal('RAND()'),
-        limit: needCount,
-      });
-
-      publishedQuestions = publishedQuestions.concat(extraRows);
-    }
 
     if (publishedQuestions.length < challengeCount) {
       return res.status(503).json({
@@ -1585,11 +1619,31 @@ router.post('/quiz/questions/import-ai', authenticate, async (req, res) => {
       : 'medium';
     const count = Math.max(1, Math.min(50, Number(req.body?.count) || 20));
 
+    const aiStartMs = Date.now();
     const generated = await generateAiQuizQuestions({
       categoryId: category.id,
       categoryName: category.name,
       count,
       difficulty,
+    });
+
+    const aiCallSuccess = Boolean(generated?.provider && generated.provider !== 'local-fallback');
+    await logAiInvocation({
+      userId: req.user?.id || null,
+      feature: 'heritage_quiz',
+      endpoint: '/ai/quiz/questions/import-ai',
+      provider: generated?.provider || 'local-fallback',
+      model: generated?.model || null,
+      success: aiCallSuccess,
+      latencyMs: Date.now() - aiStartMs,
+      downgraded: !aiCallSuccess,
+      costCny: estimateCostCny(generated?.model),
+      errorReason: aiCallSuccess ? null : 'local_fallback',
+      metadata: {
+        categoryId: category.id,
+        difficulty,
+        count,
+      },
     });
 
     const createdRows = await HeritageQuizQuestion.bulkCreate(generated.questions);
@@ -2502,9 +2556,9 @@ async function calculateSimilarity(image1, image2) {
     // 归一化相似度（0-1之间）
     // 使用指数函数使结果更合理
     const normalizedDiff = meanDiff / 255;
-    const similarity = Math.exp(-normalizedDiff * 3); // 调整系数可以改变敏感度
+    const similarity = Math.exp(-normalizedDiff * 2); // 调整系数可以改变敏感度
 
-    return Math.max(0.3, Math.min(0.95, similarity)); // 限制在30%-95%之间
+    return Math.max(0.25, Math.min(0.98, similarity)); // 限制在25%-98%之间
   } catch (error) {
     console.error('计算相似度错误:', error);
     return 0.65;

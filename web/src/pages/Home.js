@@ -107,16 +107,12 @@ const Home = () => {
 
     try {
       const response = await api.post("/subscriptions", {
-        email: email.trim(),
+        email,
         source: "home",
       });
-
-      if (response.data.success) {
-        message.success("订阅成功！感谢您的关注。");
-        setEmail("");
-      } else {
-        message.error(response.data.message || "订阅失败，请稍后重试");
-      }
+      const successMessage = response?.data?.message || "订阅成功";
+      message.success(successMessage);
+      setEmail("");
     } catch (error) {
       console.error("订阅失败:", error);
       const errorMessage =
@@ -790,6 +786,9 @@ const Home = () => {
               }}
             >
               <ChinaMap onProvinceClick={handleProvinceClick} />
+            </div>
+            <div className="map-attribution">
+              审图号:GS(2024)0650 | 地图来源:https://www.tianditu.gov.cn/
             </div>
           </div>
         </div>

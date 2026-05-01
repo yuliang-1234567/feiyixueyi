@@ -3,11 +3,21 @@
  * 统一处理图片URL的构建
  */
 
-const API_BASE_URL =
-  (process.env.REACT_APP_API_URL || '').replace(/\/api\/?$/, '') ||
-  (process.env.NODE_ENV === 'development'
-    ? 'https://feiyixueyi.cn'
-    : 'https://feiyixueyi.cn');
+const isLocalRuntime = (() => {
+  if (typeof window === 'undefined') return false;
+  const host = String(window.location.hostname || '').toLowerCase();
+  if (host === 'localhost' || host === '127.0.0.1') return true;
+  if (/^10\.\d+\.\d+\.\d+$/.test(host)) return true;
+  if (/^192\.168\.\d+\.\d+$/.test(host)) return true;
+  if (/^172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+$/.test(host)) return true;
+  return false;
+})();
+
+const RAW_API_BASE_URL = isLocalRuntime
+  ? (process.env.REACT_APP_LOCAL_API_URL || process.env.REACT_APP_API_URL || 'http://localhost:3100/api')
+  : (process.env.REACT_APP_API_URL || 'https://feiyixueyi.cn/api');
+
+const API_BASE_URL = String(RAW_API_BASE_URL).replace(/\/api\/?$/, '');
 
 const FALLBACK_IMAGE_DATA_URL =
   'data:image/svg+xml;utf8,' +
